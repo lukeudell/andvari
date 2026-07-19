@@ -51,6 +51,11 @@ jobs:
       PORTFOLIO_DB_PASSWORD: ci_only_not_a_secret
       PORTFOLIO_DB_NAME: andvari
       READER_DB_PASSWORD: ci_only_reader_not_a_secret
+      DBT_HOST: localhost
+      DBT_PORT: "5432"
+      DBT_USER: andvari_admin
+      DBT_PASSWORD: ci_only_not_a_secret
+      DBT_DBNAME: andvari
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -78,27 +83,51 @@ jobs:
         run: pip install -r dbt/requirements.txt
       - name: dbt build
         working-directory: dbt
-        env:
-          DBT_HOST: localhost
-          DBT_PORT: "5432"
-          DBT_USER: andvari_admin
-          DBT_PASSWORD: ci_only_not_a_secret
-          DBT_DBNAME: andvari
         # `build`, not `run`: build executes the models AND the tests. Using `run`
         # is how a sibling project shipped two tests that had never passed.
         run: |
           cp profiles.docker.yml profiles.yml
           dbt deps --profiles-dir .
           dbt build --profiles-dir .
+      - name: SQL lint
+        working-directory: dbt
+        # style gate for [STD-13]: lowercase keywords, leading commas, explicit
+        # columns. The dbt templater compiles jinja before linting.
+        run: |
+          pip install "sqlfluff==3.4.2" "sqlfluff-templater-dbt==3.4.2"
+          sqlfluff lint models
+      - name: dbt docs
+        working-directory: dbt
+        # lineage is institutional memory [STD-04]; the artifact is the
+        # browsable single-file docs site for every CI run.
+        run: dbt docs generate --profiles-dir . --static
+      - name: Upload dbt docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbt-docs
+          path: dbt/target/static_index.html
 
   security:
     name: Dependency and image scan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # gitleaks scans the full history, not just the tip
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: SAST (bandit)
+        # blocking at medium+ severity; the tree is clean today, so any new
+        # finding is a regression, not noise.
+        run: |
+          pip install bandit
+          bandit -r app data -x ./app/tests,./data/tests,./data/generated -ll
       - name: pip-audit
         # blocking on purpose. The monorepo ran these with `|| true`, which meant a
         # green tick never meant "no known vulnerabilities". If a finding needs to
