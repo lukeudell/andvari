@@ -4,15 +4,22 @@ models:
   - name: fct_api_requests_sf
     description: >
       Fact table for API request telemetry (Snowflake Schema).
-      Identical grain to fct_api_requests but references normalized user dimension.
+      Grain: one row per API request event — identical to fct_api_requests;
+      the normalized user path is the entire difference under measurement.
+      The contract is enforced: schema drift fails the build at the boundary.
+    config:
+      contract:
+        enforced: true
     columns:
       - name: request_id
         description: "Natural key: unique identifier for each API request"
+        data_type: varchar
         tests:
           - not_null
           - unique
       - name: user_key
         description: "Surrogate key to dim_users_sf"
+        data_type: text
         tests:
           - not_null
           - relationships:
@@ -20,6 +27,7 @@ models:
               field: user_key
       - name: model_key
         description: "Surrogate key to dim_models"
+        data_type: text
         tests:
           - not_null
           - relationships:
@@ -27,6 +35,7 @@ models:
               field: model_key
       - name: date_key
         description: "Surrogate key to dim_date"
+        data_type: integer
         tests:
           - not_null
           - relationships:
@@ -34,6 +43,7 @@ models:
               field: date_key
       - name: endpoint_key
         description: "Surrogate key to dim_endpoints"
+        data_type: text
         tests:
           - not_null
           - relationships:
@@ -41,36 +51,44 @@ models:
               field: endpoint_key
       - name: latency_ms
         description: "Server-side latency in milliseconds"
+        data_type: numeric
         tests:
           - not_null
       - name: tokens_input
         description: "Number of input tokens"
+        data_type: integer
         tests:
           - not_null
       - name: tokens_output
         description: "Number of output tokens generated"
+        data_type: integer
         tests:
           - not_null
       - name: tokens_total
         description: "Sum of input and output tokens"
+        data_type: integer
         tests:
           - not_null
       - name: cost_usd
         description: "Computed cost in USD"
+        data_type: numeric
         tests:
           - not_null
       - name: http_status
         description: "HTTP response status code"
+        data_type: smallint
         tests:
           - not_null
           - accepted_values:
               values: [200, 401, 429, 500]
       - name: safety_flag
         description: "Whether the request triggered safety classification"
+        data_type: boolean
         tests:
           - not_null
       - name: request_timestamp
         description: "Original UTC timestamp"
+        data_type: timestamp
         tests:
           - not_null
 
@@ -78,19 +96,25 @@ models:
     description: >
       Normalized user dimension (Snowflake Schema).
       Company and billing tier extracted into separate dimension tables.
+    config:
+      contract:
+        enforced: true
     columns:
       - name: user_key
         description: "Surrogate key (MD5 hash of user_id)"
+        data_type: text
         tests:
           - not_null
           - unique
       - name: user_id
         description: "Natural key: unique user identifier"
+        data_type: varchar
         tests:
           - not_null
           - unique
       - name: company_key
         description: "Foreign key to dim_companies"
+        data_type: text
         tests:
           - not_null
           - relationships:
@@ -98,6 +122,7 @@ models:
               field: company_key
       - name: billing_tier_key
         description: "Foreign key to dim_billing_tiers"
+        data_type: text
         tests:
           - not_null
           - relationships:
@@ -105,10 +130,12 @@ models:
               field: billing_tier_key
       - name: signup_date
         description: "Account creation date"
+        data_type: date
         tests:
           - not_null
       - name: region
         description: "Geographic region"
+        data_type: varchar
         tests:
           - not_null
           - accepted_values:
@@ -118,29 +145,37 @@ models:
     description: >
       Company dimension (Snowflake Schema, normalized from dim_users).
       One row per distinct company name.
+    config:
+      contract:
+        enforced: true
     columns:
       - name: company_key
         description: "Surrogate key (MD5 hash of company_name)"
+        data_type: text
         tests:
           - not_null
           - unique
       - name: company_name
         description: "Organization name"
+        data_type: varchar
         tests:
           - not_null
           - unique
       - name: industry
-        description: "Industry vertical"
+        description: "Industry vertical (most common per company, mode-resolved)"
+        data_type: varchar
         tests:
           - not_null
       - name: company_size_band
         description: "Derived size band (Small/Medium/Large)"
+        data_type: text
         tests:
           - not_null
           - accepted_values:
               values: ["Small", "Medium", "Large"]
       - name: hq_country
         description: "Headquarters country code"
+        data_type: text
         tests:
           - not_null
 
@@ -148,14 +183,19 @@ models:
     description: >
       Billing tier dimension (Snowflake Schema, normalized from dim_users).
       One row per pricing tier with rate limits and pricing.
+    config:
+      contract:
+        enforced: true
     columns:
       - name: billing_tier_key
         description: "Surrogate key (MD5 hash of tier_name)"
+        data_type: text
         tests:
           - not_null
           - unique
       - name: tier_name
         description: "Tier display name"
+        data_type: text
         tests:
           - not_null
           - unique
@@ -163,13 +203,16 @@ models:
               values: ["Free", "Starter", "Pro", "Enterprise"]
       - name: monthly_price_usd
         description: "Monthly subscription price in USD"
+        data_type: numeric
         tests:
           - not_null
       - name: rate_limit_rpm
         description: "Rate limit in requests per minute"
+        data_type: integer
         tests:
           - not_null
       - name: has_priority_access
         description: "Whether the tier includes priority queue access"
+        data_type: boolean
         tests:
           - not_null

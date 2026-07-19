@@ -4,16 +4,22 @@ models:
   - name: fct_api_requests
     description: >
       Fact table for API request telemetry (Star Schema).
-      One row per API request, with surrogate keys to all dimension tables.
-      Grain: one API request event.
+      Grain: one row per API request event, with surrogate keys to all
+      dimension tables. The contract is enforced: schema drift fails the
+      build at the boundary instead of propagating downstream.
+    config:
+      contract:
+        enforced: true
     columns:
       - name: request_id
         description: "Natural key: unique identifier for each API request"
+        data_type: varchar
         tests:
           - not_null
           - unique
       - name: user_key
         description: "Surrogate key to dim_users"
+        data_type: text
         tests:
           - not_null
           - relationships:
@@ -21,6 +27,7 @@ models:
               field: user_key
       - name: model_key
         description: "Surrogate key to dim_models"
+        data_type: text
         tests:
           - not_null
           - relationships:
@@ -28,6 +35,7 @@ models:
               field: model_key
       - name: date_key
         description: "Surrogate key to dim_date (YYYYMMDD integer)"
+        data_type: integer
         tests:
           - not_null
           - relationships:
@@ -35,6 +43,7 @@ models:
               field: date_key
       - name: endpoint_key
         description: "Surrogate key to dim_endpoints"
+        data_type: text
         tests:
           - not_null
           - relationships:
@@ -42,36 +51,44 @@ models:
               field: endpoint_key
       - name: latency_ms
         description: "Server-side latency in milliseconds"
+        data_type: numeric
         tests:
           - not_null
       - name: tokens_input
         description: "Number of input tokens"
+        data_type: integer
         tests:
           - not_null
       - name: tokens_output
         description: "Number of output tokens generated"
+        data_type: integer
         tests:
           - not_null
       - name: tokens_total
         description: "Sum of input and output tokens"
+        data_type: integer
         tests:
           - not_null
       - name: cost_usd
         description: "Computed cost in USD"
+        data_type: numeric
         tests:
           - not_null
       - name: http_status
         description: "HTTP response status code"
+        data_type: smallint
         tests:
           - not_null
           - accepted_values:
               values: [200, 401, 429, 500]
       - name: safety_flag
         description: "Whether the request triggered safety classification"
+        data_type: boolean
         tests:
           - not_null
       - name: request_timestamp
         description: "Original UTC timestamp of the request"
+        data_type: timestamp
         tests:
           - not_null
 
@@ -79,37 +96,47 @@ models:
     description: >
       User dimension (Star Schema, denormalized).
       One row per registered API user with all attributes flattened.
+    config:
+      contract:
+        enforced: true
     columns:
       - name: user_key
         description: "Surrogate key (MD5 hash of user_id)"
+        data_type: text
         tests:
           - not_null
           - unique
       - name: user_id
         description: "Natural key: unique user identifier"
+        data_type: varchar
         tests:
           - not_null
           - unique
       - name: billing_tier
         description: "User subscription tier"
+        data_type: varchar
         tests:
           - not_null
           - accepted_values:
               values: ["Free", "Starter", "Pro", "Enterprise"]
       - name: company_name
         description: "Name of the user's organization"
+        data_type: varchar
         tests:
           - not_null
       - name: industry
         description: "Industry vertical"
+        data_type: varchar
         tests:
           - not_null
       - name: signup_date
         description: "Account creation date"
+        data_type: date
         tests:
           - not_null
       - name: region
         description: "Geographic region"
+        data_type: varchar
         tests:
           - not_null
           - accepted_values:
@@ -118,35 +145,45 @@ models:
   - name: dim_models
     description: >
       LLM model dimension. One row per model variant with pricing and capabilities.
+    config:
+      contract:
+        enforced: true
     columns:
       - name: model_key
         description: "Surrogate key (MD5 hash of model_id)"
+        data_type: text
         tests:
           - not_null
           - unique
       - name: model_id
         description: "Natural key: model identifier string"
+        data_type: varchar
         tests:
           - not_null
           - unique
       - name: model_family
         description: "Model family grouping"
+        data_type: varchar
         tests:
           - not_null
       - name: cost_per_input_token
         description: "USD cost per input token"
+        data_type: numeric
         tests:
           - not_null
       - name: cost_per_output_token
         description: "USD cost per output token"
+        data_type: numeric
         tests:
           - not_null
       - name: context_window_k
         description: "Maximum context window in thousands of tokens"
+        data_type: integer
         tests:
           - not_null
       - name: is_active
         description: "Whether the model is currently available"
+        data_type: boolean
         tests:
           - not_null
 
@@ -154,60 +191,78 @@ models:
     description: >
       Date dimension covering the 90-day data window.
       One row per calendar day. Surrogate key is YYYYMMDD integer.
+    config:
+      contract:
+        enforced: true
     columns:
       - name: date_key
         description: "Surrogate key: integer in YYYYMMDD format"
+        data_type: integer
         tests:
           - not_null
           - unique
       - name: full_date
         description: "Calendar date"
+        data_type: date
         tests:
           - not_null
       - name: day_of_week
         description: "Day name (e.g., Monday)"
+        data_type: varchar
         tests:
           - not_null
       - name: is_weekend
         description: "True if Saturday or Sunday"
+        data_type: boolean
         tests:
           - not_null
       - name: week_of_year
         description: "ISO week number"
+        data_type: smallint
         tests:
           - not_null
       - name: month_name
         description: "Full month name"
+        data_type: varchar
         tests:
           - not_null
       - name: quarter
         description: "Quarter label (e.g., Q1)"
+        data_type: varchar
         tests:
           - not_null
       - name: year
         description: "Four-digit year"
+        data_type: smallint
         tests:
           - not_null
 
   - name: dim_endpoints
     description: >
       API endpoint dimension. One row per endpoint path with version and deprecation status.
+    config:
+      contract:
+        enforced: true
     columns:
       - name: endpoint_key
         description: "Surrogate key (MD5 hash of endpoint_path)"
+        data_type: text
         tests:
           - not_null
           - unique
       - name: endpoint_path
         description: "URL path of the API endpoint"
+        data_type: varchar
         tests:
           - not_null
           - unique
       - name: api_version
         description: "API version string"
+        data_type: varchar
         tests:
           - not_null
       - name: is_deprecated
         description: "Whether the endpoint is deprecated"
+        data_type: boolean
         tests:
           - not_null
