@@ -1,0 +1,6 @@
+model_id,model_family,cost_per_input_token,cost_per_output_token,context_window_k,is_active,traffic_weight,display_label
+claude-3-opus,claude-3,0.000015,0.000075,200,true,0.10,Opus (Premium)
+claude-3-sonnet,claude-3,0.000003,0.000015,200,true,0.35,Sonnet (Balanced)
+claude-3-haiku,claude-3,0.00000025,0.00000125,200,true,0.40,Haiku (Fast/Cheap)
+claude-2.1,claude-2,0.000008,0.000024,200,false,0.10,Claude 2.1 (Legacy)
+claude-instant-1.2,claude-instant,0.0000008,0.0000024,100,false,0.05,Instant 1.2 (Legacy)
