@@ -1,43 +1,63 @@
-with requests as (
-    select * from {{ ref('stg_api_requests') }}
-),
-
-dim_users_sf as (
-    select * from {{ ref('dim_users_sf') }}
-),
-
-dim_models as (
-    select * from {{ ref('dim_models') }}
-),
-
-dim_endpoints as (
-    select * from {{ ref('dim_endpoints') }}
-),
-
-dim_date as (
-    select * from {{ ref('dim_date') }}
+-- Grain: one row per API request event (same source as the star fact; the
+-- normalised user path is the entire difference under measurement).
+with req as (
+    select
+        r.request_id
+        , r.user_id
+        , r.model_id
+        , r.endpoint_path
+        , r.request_timestamp
+        , r.latency_ms
+        , r.tokens_input
+        , r.tokens_output
+        , r.tokens_total
+        , r.cost_usd
+        , r.http_status
+        , r.safety_flag
+    from {{ ref('stg_api_requests') }} as r
 )
-
+, usr as (
+    select
+        u.user_key
+        , u.user_id
+    from {{ ref('dim_users_sf') }} as u
+)
+, mdl as (
+    select
+        m.model_key
+        , m.model_id
+    from {{ ref('dim_models') }} as m
+)
+, edp as (
+    select
+        e.endpoint_key
+        , e.endpoint_path
+    from {{ ref('dim_endpoints') }} as e
+)
+, dt as (
+    select d.date_key
+    from {{ ref('dim_date') }} as d
+)
 select
-    requests.request_id,
-    dim_users_sf.user_key,
-    dim_models.model_key,
-    dim_date.date_key,
-    dim_endpoints.endpoint_key,
-    requests.latency_ms,
-    requests.tokens_input,
-    requests.tokens_output,
-    requests.tokens_total,
-    requests.cost_usd,
-    requests.http_status,
-    requests.safety_flag,
-    requests.request_timestamp
-from requests
-inner join dim_users_sf
-    on requests.user_id = dim_users_sf.user_id
-inner join dim_models
-    on requests.model_id = dim_models.model_id
-inner join dim_date
-    on cast(to_char(requests.request_timestamp, 'YYYYMMDD') as integer) = dim_date.date_key
-inner join dim_endpoints
-    on requests.endpoint_path = dim_endpoints.endpoint_path
+    req.request_id
+    , usr.user_key
+    , mdl.model_key
+    , dt.date_key
+    , edp.endpoint_key
+    , req.latency_ms
+    , req.tokens_input
+    , req.tokens_output
+    , req.tokens_total
+    , req.cost_usd
+    , req.http_status
+    , req.safety_flag
+    , req.request_timestamp
+from req
+inner join usr
+    on req.user_id = usr.user_id
+inner join mdl
+    on req.model_id = mdl.model_id
+inner join dt
+    on cast(to_char(req.request_timestamp, 'YYYYMMDD') as integer) = dt.date_key
+inner join edp
+    on req.endpoint_path = edp.endpoint_path

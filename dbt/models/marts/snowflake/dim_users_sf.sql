@@ -1,24 +1,33 @@
-with users as (
-    select * from {{ ref('stg_users') }}
-),
-
-companies as (
-    select * from {{ ref('dim_companies') }}
-),
-
-billing_tiers as (
-    select * from {{ ref('dim_billing_tiers') }}
+with usr as (
+    select
+        u.user_id
+        , u.billing_tier
+        , u.company_name
+        , u.signup_date
+        , u.region
+    from {{ ref('stg_users') }} as u
 )
-
+, cmp as (
+    select
+        c.company_key
+        , c.company_name
+    from {{ ref('dim_companies') }} as c
+)
+, bt as (
+    select
+        b.billing_tier_key
+        , b.tier_name
+    from {{ ref('dim_billing_tiers') }} as b
+)
 select
-    {{ dbt_utils.generate_surrogate_key(['users.user_id']) }} as user_key,
-    users.user_id,
-    companies.company_key,
-    billing_tiers.billing_tier_key,
-    users.signup_date,
-    users.region
-from users
-inner join companies
-    on users.company_name = companies.company_name
-inner join billing_tiers
-    on users.billing_tier = billing_tiers.tier_name
+    {{ dbt_utils.generate_surrogate_key(['usr.user_id']) }} as user_key
+    , usr.user_id
+    , cmp.company_key
+    , bt.billing_tier_key
+    , usr.signup_date
+    , usr.region
+from usr
+inner join cmp
+    on usr.company_name = cmp.company_name
+inner join bt
+    on usr.billing_tier = bt.tier_name

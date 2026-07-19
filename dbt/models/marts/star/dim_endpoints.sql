@@ -1,10 +1,13 @@
-with endpoints as (
-    select * from {{ ref('stg_endpoints') }}
+with edp as (
+    select
+        e.endpoint_path
+        , e.api_version
+        , e.is_deprecated
+    from {{ ref('stg_endpoints') }} as e
 )
-
 select
-    {{ dbt_utils.generate_surrogate_key(['endpoint_path']) }} as endpoint_key,
-    endpoint_path,
-    api_version,
-    is_deprecated
-from endpoints
+    {{ dbt_utils.generate_surrogate_key(['edp.endpoint_path']) }} as endpoint_key
+    , edp.endpoint_path
+    , edp.api_version
+    , edp.is_deprecated
+from edp

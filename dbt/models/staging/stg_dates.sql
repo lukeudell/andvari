@@ -1,14 +1,10 @@
-with source as (
-    select * from {{ source('raw_staging', 'dates') }}
-)
-
 select
-    date_key,
-    full_date,
-    day_of_week,
-    is_weekend,
-    week_of_year,
-    month_name,
-    quarter,
-    year
-from source
+    s.date_key
+    , s.full_date
+    , s.day_of_week
+    , s.is_weekend
+    , s.week_of_year
+    , s.month_name
+    , s.quarter
+    , s.year
+from {{ source('raw_staging', 'dates') }} as s

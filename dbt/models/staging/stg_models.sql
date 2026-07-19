@@ -1,12 +1,8 @@
-with source as (
-    select * from {{ source('raw_staging', 'models') }}
-)
-
 select
-    model_id,
-    model_family,
-    cost_per_input_token,
-    cost_per_output_token,
-    context_window_k,
-    is_active
-from source
+    s.model_id
+    , s.model_family
+    , s.cost_per_input_token
+    , s.cost_per_output_token
+    , s.context_window_k
+    , s.is_active
+from {{ source('raw_staging', 'models') }} as s
