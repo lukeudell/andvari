@@ -1,0 +1,29 @@
+# secrets: never commit
+.env
+*.env
+!.env.example
+dbt/profiles.yml
+app/.streamlit/secrets.toml
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# dbt
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+dbt/.user.yml
+
+# generated data: regenerate with `docker compose --profile seed up`
+data/generated/
+
+# local working notes: not part of the published repo
+BACKLOG.md
+
+# os / editor
+.DS_Store
+Thumbs.db
