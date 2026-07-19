@@ -84,12 +84,13 @@ sections:
       parallelism. On hardware where every plan parallelises, the gap narrows
       to a few percent at 500K rows.
 
-      Two environments, two answers, one lesson -- and it is the reason both
+      Two environments, two answers, one lesson, and it is the reason both
       schemas exist: the denormalisation trade-off is real but
-      environment-dependent. Storage redundancy buys join elimination; what
-      that is worth is a measurement, not a slogan. The snowflake earns its
-      cost when dimensions are large, frequently updated, or when write-path
-      consistency matters more than read performance. Here, none of those hold.
+      environment-dependent. Storage redundancy buys join elimination, and its
+      value depends on the planner, the cache, and the scale in front of you.
+      The snowflake earns its cost when dimensions are large, frequently
+      updated, or when write-path consistency matters more than read
+      performance. Here, none of those hold.
 
   - slug: quality
     title: A Bug the Tests Caught

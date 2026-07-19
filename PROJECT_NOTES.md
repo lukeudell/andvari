@@ -1,216 +1,143 @@
-# Andvari — inherited state
+# Andvari: extraction and hardening log
 
-Written 2026-07-19, at extraction from the `command_center` monorepo. Everything
-here was found, not introduced. Nothing in this list was silently fixed: the
-extraction changed packaging, not behaviour.
+This project was deliberately split out of the `command_center` monorepo on
+2026-07-19. The goal of the split was independence: the portfolio site and its
+projects had grown interdependent, and this one now owns its own Postgres, its
+own dbt project, and its own compose stack, with no shared infrastructure.
 
-Ordered by what would embarrass you most if a sharp interviewer found it first.
-
----
-
-## 1. The published narrative claims things the code does not do
-
-These matter more than ordinary bugs. A portfolio piece that overstates is worse
-than one that under-delivers, because the overstatement is the thing being
-evaluated.
-
-**The lineage diagram is wrong.** `docs/source-pages/pipeline.astro` draws
-`dim_models_sf`, `dim_date_sf` and `dim_endpoints_sf` as distinct snowflake nodes.
-Those files do not exist — `fct_api_requests_sf.sql` references the star's
-`dim_models`, `dim_date`, `dim_endpoints`. `models.astro` gets this right and says
-"shared with star schema", so the two pages contradict each other.
-
-**The snowflake model count is inflated.** `models.astro` says "MODELS: 7 (1 fact +
-6 dimensions)". Four snowflake model files exist; the other three are the star's,
-counted twice. The 14-model total elsewhere is correct.
-
-**"99.9% Uptime" is a hardcoded literal** on the index page with nothing measuring
-it. Either measure it or delete it.
-
-**Decide, then act:** make the claim true or stop making it. `docs/CASE_STUDY.md`
-has been written to describe what the code actually does.
-
-## 2. The forecaster has dead database wiring
-
-`app/app.py` contains no `psycopg2` import and opens no connection — the forecaster
-is entirely parametric, computing from slider inputs. Yet:
-
-- `app/requirements.txt` ships `psycopg2-binary`
-- the compose service injects five `PORTFOLIO_DB_*` variables
-- `depends_on: db (service_healthy)` gates startup on a database it never queries
-
-So the app refuses to start until Postgres is healthy, for no reason. Either wire
-it to real data (which would make it a much stronger demo — it currently forecasts
-from assumptions while a 500K-row fact table sits next to it), or cut the
-dependency, the env vars and the driver.
-
-The extraction kept the wiring as-is so the change is yours to make deliberately.
-
-*(Resolved 2026-07-19: the forecaster now reads the star schema as
-`portfolio_reader` — observed model mix, token averages, and request rates
-become a "TELEMETRY (OBSERVED)" preset — and degrades to parametric mode when
-the database is absent. See `app/db.py` and its test suite.)*
-
-## 3. Token pricing has three sources of truth
-
-| Where | What |
-|---|---|
-| `data/generate_data.py` → `MODELS` | 5 models with per-token prices |
-| `app/app.py` → `MODEL_CATALOG` | 3 models, comment says "mirrors generate_data.py" |
-| `dbt/models/marts/star/dim_models.sql` | prices again, via the loaded table |
-
-The app's copy is already stale — missing `claude-2.1` and `claude-instant-1.2`.
-This is the [STD-03] rule-of-three trigger. One source, derived everywhere else.
-
-*(Resolved 2026-07-19: `data/model_catalog.csv` is now the single source. The
-generator reads it, the loader ships it to `raw_staging.models` (whence
-`dim_models`), and the app loads it via `app/catalog.py`. No hardcoded copy
-remains.)*
-
-## 4. Test coverage is thin and lopsided
-
-The only Python tests are `app/tests/test_theme_forecaster.py`, and they cover
-`theme.py` exclusively — an XSS/CSS-injection suite asserting that malicious hex
-input cannot escape into `unsafe_allow_html`. It is a genuinely good suite.
-
-Nothing covers `compute_forecast`, `compute_latency_risk`, `format_number`, the
-generator distributions, or the loader. The forecaster's arithmetic — the thing a
-visitor actually interacts with — is untested.
-
-dbt is in better shape: 143 declarative tests across the three `schema.yml` files.
-
-*(Mostly resolved 2026-07-19: forecast arithmetic, catalog loading, DB-baseline
-shaping, and the generator's statistical distributions are now covered —
-151 Python tests total. Still open: the loader has only CI integration
-coverage, no unit tests.)*
-
-## 5. Python versions disagree
-
-`app/Dockerfile` is `python:3.11-slim`. `data/Dockerfile` is `python:3.12-slim`.
-The monorepo's CI pinned 3.11 while local runs used 3.12. Pick one.
-
-*(Resolved 2026-07-19: 3.12 everywhere — both Dockerfiles and all CI jobs.)*
-
-## 6. Known upstream CVEs, accepted rather than fixed
-
-From the monorepo's `docs/KNOWN_ISSUES.md`, carried forward:
-
-- dbt transitive deps: CVE-2026-29790 (dbt-common 1.27.1), CVE-2025-58367
-  (deepdiff 7.0.1). Cannot upgrade without breaking dbt-core 1.9.4's `protobuf<6.0`
-  constraint.
-- Metabase v0.59.1 image: 1 CRITICAL (zlib CVE-2026-22184) + 6 HIGH, unfixable
-  upstream at that version.
-
-Metabase is not part of this extraction — the BI layer was shared infrastructure.
-If this project needs a dashboard, that is a decision to make fresh.
-
-## 7. What the extraction deliberately did not bring
-
-- **Metabase.** One shared instance served all three data projects. Re-adding BI
-  here is a fresh decision, not a port.
-- **Traefik / nginx.** The monorepo's public ingress. This project now publishes a
-  local port directly; production ingress is a deployment concern.
-- **`leaderboard/`.** A FastAPI arcade high-score service for the site's CTF
-  easter egg. It was never part of this project despite living next door.
-  *(Resolved 2026-07-19: the `leaderboard_writer` role and `game.scores` code
-  is no longer present in `data/load_data.py` — verified by grep across the
-  repo. The note below in the appendix is retained as written but is stale.)*
-- **`dbt/profiles.yml`.** It contained a plaintext dev password. Write your own
-  from the example; it is gitignored.
-- **`data/generated/*.csv`.** Committed CSV output in the monorepo. Regenerate
-  instead: `docker compose --profile seed up`.
-
-## 8. The strongest material here, for when you write it up
-
-Two things are genuinely good and should be led with, not buried:
-
-**The star-vs-snowflake `EXPLAIN ANALYZE` comparison.** Real measured numbers:
-star cost-by-model 197ms (1 join), snowflake cost-by-industry 206ms (3 joins, no
-parallelism), star cost-by-industry 51ms — 4× faster because industry is
-denormalised into `dim_users`. That is the Kimball trade-off demonstrated rather
-than asserted.
-
-*(Update 2026-07-19: re-measured with the new reproducible benchmark
-(`data/benchmark_star_vs_snowflake.py`) on the dev workstation, the 4× gap does
-not reproduce — Postgres 16 parallelises all three plans and the star wins by
-only a few percent at this scale. The published narrative was rewritten to
-present both measurements and the environment-dependence as the point. Claims
-must survive being rerun.)*
-
-**The `dim_companies` fan-out bug.** `SELECT DISTINCT company_name, industry`
-returned 6,457 rows instead of ~4,900 because the generator assigned multiple
-industries to the same company name, silently inflating the fact table from 500K to
-640K rows. The `unique` test on `company_key` caught it; fixed with
-`mode() WITHIN GROUP`. A test catching a silent data-correctness bug is the most
-persuasive story in the whole project.
+A split like that is diagnostic. Assumptions that were true by coincidence
+inside the monorepo stop being true outside it, and say so. This log records
+what the split surfaced, what was done about each item, and how the fixes were
+verified. Items are kept even after resolution, because the finding is often
+more instructive than the fix.
 
 ---
 
-## Appendix: what the extraction had to repair
+## Findings at extraction, tracked to resolution
 
-Recorded separately from the inherited state above, because these are changes made
-on 2026-07-19 rather than problems still waiting for you.
+### 1. The published narrative had drifted from the code
 
-The monorepo's packaging did not survive the split, and fixing it surfaced one real
-bug that was invisible while every project shared one database.
+The old site pages described a lineage diagram with snowflake dimension tables
+that do not exist (the snowflake mart reuses the star's conformed dimensions),
+counted shared dimensions twice to inflate the model count, and displayed a
+hardcoded "99.9% Uptime" figure that nothing measured.
 
-**The loader hardcoded the database name in its GRANT statements.**
-`data/load_data.py` granted `CONNECT ON DATABASE command_center` as a literal, in
-two places, while connecting to whatever `--dbname` said. Inside the monorepo those
-were always the same string, so the bug could not fire. Extracted, the load
-succeeded and then failed at role creation against a database that does not exist.
-Now uses `conn.info.dbname`, so the grant follows the connection.
+**Resolved.** `docs/CASE_STUDY.md` and `project.yaml` were rewritten to
+describe what the code does, and they are the only sources that feed the
+portfolio. The original pages are kept verbatim in `docs/source-pages/` as a
+historical record and are not a build input. The operating rule that came out
+of this: make the claim true or stop making it.
 
-That is the general shape of what a split is good for: assumptions that were true
-by coincidence stop being true, and say so.
+### 2. The forecaster shipped database wiring it never used
 
-**Packaging changes made:**
+`app/app.py` imported nothing from psycopg2 and opened no connection, yet the
+image shipped the driver, the compose service injected five database variables,
+and startup was gated on a healthy Postgres it never queried.
 
-- `data/Dockerfile` copied six generators and a shared `seed.sh` orchestrating all
-  three projects. Now copies this project's directory only.
-- `data/seed.sh` written fresh: validates required environment, generates, loads,
-  and prints the grant-ordering warning.
-- `dbt/profiles.docker.yml` written for this project, reading `DBT_*` from the
-  environment. `dbt/profiles.yml.example` added for local runs; `profiles.yml`
-  itself is gitignored, because the monorepo's copy carried a plaintext password.
-- `docker-compose.yml` written fresh, with its own Postgres on `127.0.0.1:55432`
-  so all four extracted projects and the portfolio can run simultaneously.
+**Resolved.** The forecaster now reads the star schema as the SELECT-only
+`portfolio_reader` role and turns observed traffic into a TELEMETRY (OBSERVED)
+preset: real model mix, real token averages, real request rates. When the
+database is absent it degrades to parametric mode instead of crashing. See
+`app/db.py` and its test suite.
 
-**Verified working after these changes**, from an empty volume:
-`docker compose up -d db` then `--profile seed run seed` (500K rows generated,
-loaded, `portfolio_reader` created and its SELECT-only permissions asserted) then
-`--profile seed run dbt` — **PASS=157, ERROR=0**: 9 tables, 5 views, 143 data tests.
+### 3. Token pricing had three sources of truth
 
-**Still outstanding:** ~~`data/load_data.py` also creates the `leaderboard_writer`
-role and the `game.scores` table for the site's CTF arcade feature, which has
-nothing to do with this project. `data/seed.sh` therefore passes a throwaway
-password to satisfy the argument. Delete that code path.~~ *(Resolved
-2026-07-19: verified absent from the loader and seed script.)*
+The generator, the app, and `dim_models` each carried their own price table,
+and the app's copy had already drifted (two models missing).
 
+**Resolved.** `data/model_catalog.csv` is the single source. The generator
+prices requests from it, the loader ships it to the warehouse where
+`dim_models` is built from it, and the app loads it through `app/catalog.py`.
+A reconciliation test asserts every fact row's cost is recomputable from the
+pricing dimension, so drift now fails the build.
+
+### 4. Test coverage was thin outside dbt
+
+The only Python tests covered the theme's CSS-injection allowlist. The
+forecaster's arithmetic, the generator's distributions, and the loader had
+none. dbt was healthier, with 143 declarative tests.
+
+**Mostly resolved.** Forecast arithmetic, catalog loading, baseline shaping,
+and the generator's statistical properties are now covered: 158 Python tests.
+dbt carries 145 data tests including two reconciliation tests, with enforced
+contracts on every mart. Still open: the loader has integration coverage in CI
+but no unit tests.
+
+### 5. Python versions disagreed
+
+The app image was 3.11, the data image 3.12, and CI pinned both at different
+times. **Resolved:** 3.12 everywhere.
+
+### 6. Known upstream CVEs, accepted with reasons
+
+dbt's transitive dependencies carry findings that cannot clear without moving
+dbt-core past its protobuf constraint. They are accepted explicitly: listed as
+`--ignore-vuln` flags in CI with reasons recorded in `SECURITY.md`, never
+swallowed with a silent exit code. App and data dependencies must audit clean.
 
 ---
 
-## Appendix: the app assumed it was behind a reverse proxy
+## What the split deliberately left behind
 
-Added 2026-07-19, during verification.
+- **The BI layer (Metabase).** One shared instance served several projects in
+  the monorepo, and its pinned image carried unfixable CVEs. Re-adding
+  dashboards here is a fresh decision, not a port.
+- **Ingress (Traefik).** A deployment concern, not a project concern. The app
+  serves at the root by default and honors a base path variable when behind a
+  proxy; both modes are verified.
+- **A neighboring arcade service** and its database role, which never belonged
+  to this project. Verified absent from the loader by grep on 2026-07-19.
+- **Checked-in generated CSVs.** Regenerate instead:
+  `docker compose --profile seed run --rm seed`.
+- **`dbt/profiles.yml`.** The monorepo's copy carried a plaintext dev
+  password. It is gitignored here; an example ships instead.
 
-`app/.streamlit/config.toml` hardcoded `baseUrlPath = "forecaster"`. That was correct
-inside the monorepo, where Traefik routed `/forecaster` to this container, and wrong
-everywhere else: standalone, the app answered 404 at `/` and only worked if you
-happened to know the prefix. The container healthcheck had the same path baked in.
+## What the split repaired
 
-An app that only starts correctly in one deployment is not portable, so the path is
-now supplied by `STREAMLIT_SERVER_BASE_URL_PATH`, defaulting to empty:
+The loader hardcoded the monorepo's database name inside its GRANT statements.
+Inside the monorepo the hardcoded name and the connected database were always
+the same string, so the bug could not fire; standalone, the load succeeded and
+role creation failed against a database that did not exist. The grants now
+follow `conn.info.dbname`, so they apply to whatever database the loader is
+actually connected to.
 
-- standalone, `APP_BASE_PATH=` (the default) serves at `http://localhost:8501/`
-- behind a proxy, `APP_BASE_PATH=forecaster` restores the old behaviour
+Packaging was rebuilt for independence: the data image copies only this
+project, `seed.sh` validates its environment before touching the database, the
+compose stack binds Postgres to loopback on its own port (55432) so every
+extracted project can run side by side, and the whole chain was verified from
+an empty volume.
 
-The healthcheck reads the same variable, so it follows whichever is configured.
+## Verification snapshot
 
-**Verified both ways** on `andvari`: root serves 200 and reports healthy; with the
-prefix set, `/forecaster/` serves and `/` correctly 404s, and the container still
-reports healthy.
+Current state, verified end to end on 2026-07-19:
 
-**App test suite:** passes. It covers `theme.py` only -- the palette resolver and
-its hex allowlist, asserting that injected CSS cannot escape into
-`unsafe_allow_html`. Good tests, narrow scope; see the coverage note above.
+- 500K rows generated and loaded; `portfolio_reader` created, SELECT verified,
+  INSERT and DELETE verified denied.
+- `dbt build`: 14 models, 145 data tests, contracts enforced. PASS=159,
+  ERROR=0.
+- 158 Python tests passing. sqlfluff, bandit (medium+), and gitleaks clean.
+- App healthy standalone and behind a base path; telemetry calibration
+  verified inside the container against the live star schema.
+
+## The measurement that changed under re-measurement
+
+The strongest artifact here is the star-vs-snowflake comparison, and it earned
+that status twice. The original monorepo measurement showed the star answering
+cost-by-industry 4x faster (51 ms vs 206 ms) because the planner ran the
+snowflake's three hash joins without parallelism. When the comparison became a
+reproducible script (`data/benchmark_star_vs_snowflake.py`), the current
+hardware told a different story: Postgres 16 parallelises all three plans and
+the gap narrows to a few percent at 500K rows.
+
+The published narrative presents both measurements. Two environments, two
+answers, one lesson: the denormalisation trade-off is real but
+environment-dependent, and a claim you can rerun is worth ten you can only
+read.
+
+The other keeper is the `dim_companies` fan-out. A plain SELECT DISTINCT
+returned 6,457 rows against roughly 4,900 real companies because the generator
+assigned some company names two industries. The surplus rows fanned the join
+and silently inflated the fact table from 500K to 640K rows, a 28% error in
+every downstream revenue figure, while the pipeline ran green. The `unique`
+test on `company_key` caught it; the fix was `mode() within group`, and a
+cross-mart reconciliation test now guards the invariant permanently.

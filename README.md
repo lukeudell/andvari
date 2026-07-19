@@ -11,10 +11,13 @@ domain-appropriate statistical distributions, loaded into Postgres, modelled two
 with dbt (star *and* snowflake, over the same source, so the trade-off can be
 measured rather than argued), and surfaced through an interactive cost forecaster.
 
-Extracted from the `command_center` monorepo on 2026-07-19 and now self-contained.
+Deliberately extracted from a personal monorepo on 2026-07-19 to stand alone:
+its own Postgres, its own dbt project, its own compose stack, no shared
+infrastructure.
 
-> Read `PROJECT_NOTES.md` before changing anything — it lists what was inherited
-> broken and which published claims the code does not currently support.
+> `PROJECT_NOTES.md` is the engineering log from that extraction. It records
+> what was decoupled, what was hardened afterward, and the verification behind
+> each change.
 
 ## Run it
 
@@ -36,7 +39,7 @@ python -m pytest app/tests data/tests -q    # 158 Python tests, no database need
 | `dbt/` | 14 models: 5 staging views, 5 star, 4 snowflake. 145 data tests, contracts enforced on the marts |
 | `data/` | Generator (fixed seed 42) and loader (Python 3.12) |
 | `docs/` | `CASE_STUDY.md` plus the original site pages, kept verbatim |
-| `project.yaml` | How this appears on lukeudell.com — the portfolio import contract |
+| `project.yaml` | How this appears on lukeudell.com, via the portfolio import contract |
 
 ## Lineage
 
@@ -69,7 +72,7 @@ and index selectivity. Uniform random data makes every plan look the same.
 ## The comparison worth reading
 
 Both marts are built over the same source so the same question can be asked
-twice — and remeasured on any machine, because the number is a command, not a
+twice, and remeasured on any machine, because the number is a command, not a
 claim:
 
 ```bash
@@ -84,15 +87,16 @@ python data/benchmark_star_vs_snowflake.py
 
 ¹ Median of 5 warm runs, Postgres 16 in Docker on a dev workstation.
 
-The same queries measured in the source monorepo showed 51 ms vs 206 ms — a 4×
-gap — because that planner ran the snowflake's three hash joins without
+The same queries measured in the source monorepo showed 51 ms vs 206 ms, a 4x
+gap, because that planner ran the snowflake's three hash joins without
 parallelism. On a host where every plan parallelises, the gap narrows to a few
 percent at 500K rows. Both results are the same lesson, and the reason both
 schemas exist: the denormalisation trade-off is real but environment-dependent.
-Storage redundancy buys join elimination; what that's worth is a measurement,
-not a slogan. The snowflake earns its cost when dimensions are large,
+Storage redundancy buys join elimination, and its value depends on the planner,
+the cache, and the scale in front of you. The snowflake earns its cost when
+dimensions are large,
 frequently updated, or when write-path consistency matters more than read
-performance — which, here, it does not.
+performance, which here it does not.
 
 ## CI
 
