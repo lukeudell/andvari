@@ -1,3 +1,14 @@
+-- ============================================================
+--  file:       dbt/models/marts/snowflake/dim_companies.sql
+--  purpose:    company dimension normalised out of users, mode-resolved industry
+--  owner:      Luke Udell
+--  spdx:       MIT
+--  std:        [STD-04] [STD-13]
+--  adr:        none
+--  ticket:     none
+--  ticket-url: none
+--  created:    2026-07-19
+-- ============================================================
 with usr as (
     select
         u.company_name

@@ -1,7 +1,18 @@
+# ============================================================
+#  file:       data/tests/test_generate_data.py
+#  purpose:    asserts the generator's distributions under the fixed seed
+#  owner:      Luke Udell
+#  spdx:       MIT
+#  std:        [STD-02] [STD-14]
+#  adr:        none
+#  ticket:     none
+#  ticket-url: none
+#  created:    2026-07-19
+# ============================================================
 """
 Statistical property tests for the synthetic data generator.
 
-The README claims the data is "not random noise" — log-normal latency, Pareto
+The README claims the data is "not random noise": log-normal latency, Pareto
 tokens, weighted status codes, Bernoulli safety flags. These tests assert those
 properties hold under the fixed seed, so the claim is enforced rather than
 narrated. Tolerances are wide enough to be seed-stable but tight enough to

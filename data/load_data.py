@@ -1,3 +1,14 @@
+# ============================================================
+#  file:       data/load_data.py
+#  purpose:    loads generated CSVs into raw_staging and creates the read-only role
+#  owner:      Luke Udell
+#  spdx:       MIT
+#  std:        [STD-05] [STD-13]
+#  adr:        none
+#  ticket:     none
+#  ticket-url: none
+#  created:    2026-07-19
+# ============================================================
 """
 Andvari: data loader
 Creates raw staging schema in PostgreSQL and loads generated CSVs.

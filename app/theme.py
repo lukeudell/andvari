@@ -1,3 +1,14 @@
+# ============================================================
+#  file:       app/theme.py
+#  purpose:    palette resolution with a strict hex allowlist against CSS injection
+#  owner:      Luke Udell
+#  spdx:       MIT
+#  std:        [STD-05]
+#  adr:        none
+#  ticket:     none
+#  ticket-url: none
+#  created:    2026-07-19
+# ============================================================
 """
 Command Center: Streamlit theme resolution.
 

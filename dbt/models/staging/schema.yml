@@ -1,3 +1,14 @@
+# ============================================================
+#  file:       dbt/models/staging/schema.yml
+#  purpose:    source contract and column tests for the staging layer
+#  owner:      Luke Udell
+#  spdx:       MIT
+#  std:        [STD-04] [STD-14]
+#  adr:        none
+#  ticket:     none
+#  ticket-url: none
+#  created:    2026-07-19
+# ============================================================
 version: 2
 
 # Source freshness is deliberately not configured. The source is a seeded

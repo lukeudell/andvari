@@ -1,3 +1,14 @@
+# ============================================================
+#  file:       dbt/dbt_project.yml
+#  purpose:    dbt project config: staging views, star and snowflake mart tables
+#  owner:      Luke Udell
+#  spdx:       MIT
+#  std:        [STD-04]
+#  adr:        none
+#  ticket:     none
+#  ticket-url: none
+#  created:    2026-07-19
+# ============================================================
 name: 'andvari'
 version: '0.1.0'
 config-version: 2

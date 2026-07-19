@@ -1,12 +1,23 @@
+# ============================================================
+#  file:       app/catalog.py
+#  purpose:    loads the single-source model pricing catalog
+#  owner:      Luke Udell
+#  spdx:       MIT
+#  std:        [STD-03]
+#  adr:        none
+#  ticket:     none
+#  ticket-url: none
+#  created:    2026-07-19
+# ============================================================
 """
 Model catalog loader for the Token Forecaster.
 
 ``data/model_catalog.csv`` is the single source of pricing truth for the whole
 project ([STD-03]): the generator prices synthetic requests from it, the loader
 ships it to Postgres (where dbt builds dim_models), and this module feeds the
-app. The app deliberately reads the file, not the database copy — the database
-is rebuilt from this same file, so a second code path would add failure modes
-without adding freshness.
+app. The app deliberately reads the file rather than the database copy: the
+database is rebuilt from this same file, so a second code path would add
+failure modes without adding freshness.
 
 Dependency-free (stdlib csv) so it can be imported without Streamlit or pandas.
 """
@@ -40,8 +51,8 @@ def load_catalog(path: Path | str | None = None) -> dict[str, dict]:
     Load active models keyed by model_id.
 
     Raises FileNotFoundError if the file is absent and ValueError if the header
-    is wrong or no model is active — an empty forecaster must fail loudly, not
-    render blank.
+    is wrong or no model is active; an empty forecaster must fail loudly
+    rather than render blank.
     """
     resolved = Path(path) if path is not None else default_catalog_path()
     if not resolved.exists():

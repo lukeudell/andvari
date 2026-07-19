@@ -1,3 +1,14 @@
+-- ============================================================
+--  file:       dbt/models/marts/star/fct_api_requests.sql
+--  purpose:    star fact, one row per API request
+--  owner:      Luke Udell
+--  spdx:       MIT
+--  std:        [STD-04] [STD-13]
+--  adr:        none
+--  ticket:     none
+--  ticket-url: none
+--  created:    2026-07-19
+-- ============================================================
 -- Grain: one row per API request event.
 with req as (
     select

@@ -1,3 +1,14 @@
+# ============================================================
+#  file:       data/tests/test_benchmark.py
+#  purpose:    tests the benchmark's parsing and statistics without a database
+#  owner:      Luke Udell
+#  spdx:       MIT
+#  std:        [STD-02]
+#  adr:        none
+#  ticket:     none
+#  ticket-url: none
+#  created:    2026-07-19
+# ============================================================
 """
 Tests for the benchmark's result-shaping logic. The measurement itself needs a
 live warehouse; the parsing and statistics must not.

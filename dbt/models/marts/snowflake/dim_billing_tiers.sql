@@ -1,3 +1,14 @@
+-- ============================================================
+--  file:       dbt/models/marts/snowflake/dim_billing_tiers.sql
+--  purpose:    billing tier dimension seeded inline
+--  owner:      Luke Udell
+--  spdx:       MIT
+--  std:        [STD-04] [STD-13]
+--  adr:        none
+--  ticket:     none
+--  ticket-url: none
+--  created:    2026-07-19
+-- ============================================================
 select
     {{ dbt_utils.generate_surrogate_key(['t.tier_name']) }} as billing_tier_key
     , t.tier_name

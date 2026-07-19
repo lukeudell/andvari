@@ -1,3 +1,14 @@
+# ============================================================
+#  file:       data/Dockerfile
+#  purpose:    generator and loader image: python 3.12 slim
+#  owner:      Luke Udell
+#  spdx:       MIT
+#  std:        [STD-05]
+#  adr:        none
+#  ticket:     none
+#  ticket-url: none
+#  created:    2026-07-19
+# ============================================================
 FROM python:3.12-slim
 
 WORKDIR /app

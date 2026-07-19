@@ -1,3 +1,14 @@
+# ============================================================
+#  file:       .github/workflows/ci.yml
+#  purpose:    three jobs ordered by failure speed: unit, pipeline, security
+#  owner:      Luke Udell
+#  spdx:       MIT
+#  std:        [STD-02] [STD-05]
+#  adr:        none
+#  ticket:     none
+#  ticket-url: none
+#  created:    2026-07-19
+# ============================================================
 name: CI
 
 # Runs on every push and PR. Three jobs, deliberately ordered by how fast they

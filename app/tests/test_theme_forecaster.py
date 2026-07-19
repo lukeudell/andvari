@@ -1,3 +1,14 @@
+# ============================================================
+#  file:       app/tests/test_theme_forecaster.py
+#  purpose:    asserts query-param colors can never escape into unsafe_allow_html
+#  owner:      Luke Udell
+#  spdx:       MIT
+#  std:        [STD-02] [STD-05]
+#  adr:        none
+#  ticket:     none
+#  ticket-url: none
+#  created:    2026-07-19
+# ============================================================
 """
 Theme-resolution tests for the Token Forecaster app.
 

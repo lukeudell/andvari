@@ -1,9 +1,20 @@
+# ============================================================
+#  file:       app/db.py
+#  purpose:    telemetry baseline from the star schema, with parametric fallback
+#  owner:      Luke Udell
+#  spdx:       MIT
+#  std:        [STD-05] [STD-14]
+#  adr:        none
+#  ticket:     none
+#  ticket-url: none
+#  created:    2026-07-19
+# ============================================================
 """
 Telemetry baseline for the Token Forecaster.
 
 Reads the star schema (as the SELECT-only portfolio_reader role) and turns
 observed traffic into calibrated slider defaults: real model mix, real token
-averages, real request rates — instead of guessed ones. Every failure path
+averages, real request rates instead of guessed ones. Every failure path
 (no credentials, database down, empty warehouse) degrades to None and the app
 falls back to parametric mode; a forecaster must never crash because the
 database is absent.
@@ -51,7 +62,7 @@ def _snap(value: float, low: int, high: int, step: int = 1) -> int:
 
 def shape_baseline(stats: dict, mix_rows: list[tuple], catalog_ids: set) -> dict | None:
     """
-    Turn raw aggregates into forecaster defaults. Pure — fully unit-testable.
+    Turn raw aggregates into forecaster defaults. Pure, so fully unit-testable.
 
     Returns None when the telemetry cannot support a calibration (empty
     warehouse, or no traffic on any model the catalog still offers).
@@ -73,10 +84,10 @@ def shape_baseline(stats: dict, mix_rows: list[tuple], catalog_ids: set) -> dict
     for m in by_remainder[:shortfall]:
         floors[m] += 1
 
-    rpd = stats["n_requests"] / stats["n_users"] / stats["n_days"]
+    requests_per_user_day = stats["n_requests"] / stats["n_users"] / stats["n_days"]
     return {
         "mau": int(stats["n_users"]),
-        "requests_per_user_day": _snap(rpd, _RPD_MIN, _RPD_MAX),
+        "requests_per_user_day": _snap(requests_per_user_day, _RPD_MIN, _RPD_MAX),
         "avg_input_tokens": _snap(
             float(stats["avg_tokens_input"]), _TOKENS_MIN, _TOKENS_MAX, _TOKENS_STEP
         ),
@@ -95,7 +106,7 @@ def fetch_baseline(catalog_ids: set, connect=psycopg2.connect) -> dict | None:
 
     ``connect`` is injectable for tests. Credentials come from the same
     PORTFOLIO_DB_* variables the compose stack injects; without a password we
-    don't even attempt a connection — standalone runs stay silent and fast.
+    don't even attempt a connection; standalone runs stay silent and fast.
     """
     password = os.getenv("PORTFOLIO_DB_PASSWORD")
     if not password:

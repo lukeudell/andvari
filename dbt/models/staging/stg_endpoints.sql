@@ -1,3 +1,14 @@
+-- ============================================================
+--  file:       dbt/models/staging/stg_endpoints.sql
+--  purpose:    stage the raw endpoint catalog, 1:1 with source
+--  owner:      Luke Udell
+--  spdx:       MIT
+--  std:        [STD-04] [STD-13]
+--  adr:        none
+--  ticket:     none
+--  ticket-url: none
+--  created:    2026-07-19
+-- ============================================================
 select
     s.endpoint_path
     , s.api_version

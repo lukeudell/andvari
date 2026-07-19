@@ -1,3 +1,14 @@
+-- ============================================================
+--  file:       dbt/tests/assert_star_and_snowflake_agree.sql
+--  purpose:    fails the build if the two facts disagree on count or cost
+--  owner:      Luke Udell
+--  spdx:       MIT
+--  std:        [STD-14]
+--  adr:        none
+--  ticket:     none
+--  ticket-url: none
+--  created:    2026-07-19
+-- ============================================================
 -- The two marts model the same source; if their row counts or cost totals
 -- ever diverge, one of them is silently wrong. This is exactly how the
 -- dim_companies fan-out showed up: 500K rows became 640K and every revenue

@@ -1,3 +1,14 @@
+-- ============================================================
+--  file:       dbt/models/marts/star/dim_users.sql
+--  purpose:    denormalised user dimension for the star mart
+--  owner:      Luke Udell
+--  spdx:       MIT
+--  std:        [STD-04] [STD-13]
+--  adr:        none
+--  ticket:     none
+--  ticket-url: none
+--  created:    2026-07-19
+-- ============================================================
 with usr as (
     select
         u.user_id

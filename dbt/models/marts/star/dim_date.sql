@@ -1,3 +1,14 @@
+-- ============================================================
+--  file:       dbt/models/marts/star/dim_date.sql
+--  purpose:    calendar dimension over the data window
+--  owner:      Luke Udell
+--  spdx:       MIT
+--  std:        [STD-04] [STD-13]
+--  adr:        none
+--  ticket:     none
+--  ticket-url: none
+--  created:    2026-07-19
+-- ============================================================
 select
     d.date_key
     , d.full_date

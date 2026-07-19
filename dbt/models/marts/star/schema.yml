@@ -1,3 +1,14 @@
+# ============================================================
+#  file:       dbt/models/marts/star/schema.yml
+#  purpose:    enforced contracts and tests for the star mart
+#  owner:      Luke Udell
+#  spdx:       MIT
+#  std:        [STD-04] [STD-14]
+#  adr:        none
+#  ticket:     none
+#  ticket-url: none
+#  created:    2026-07-19
+# ============================================================
 version: 2
 
 models:

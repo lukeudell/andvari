@@ -1,3 +1,14 @@
+-- ============================================================
+--  file:       dbt/models/staging/stg_api_requests.sql
+--  purpose:    stage raw API request telemetry, 1:1 with source
+--  owner:      Luke Udell
+--  spdx:       MIT
+--  std:        [STD-04] [STD-13]
+--  adr:        none
+--  ticket:     none
+--  ticket-url: none
+--  created:    2026-07-19
+-- ============================================================
 select
     s.request_id
     , s.user_id

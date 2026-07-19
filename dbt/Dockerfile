@@ -1,3 +1,14 @@
+# ============================================================
+#  file:       dbt/Dockerfile
+#  purpose:    dbt build image: models plus tests, env-driven profile
+#  owner:      Luke Udell
+#  spdx:       MIT
+#  std:        [STD-05]
+#  adr:        none
+#  ticket:     none
+#  ticket-url: none
+#  created:    2026-07-19
+# ============================================================
 FROM python:3.12-slim
 
 WORKDIR /app

@@ -1,3 +1,14 @@
+-- ============================================================
+--  file:       dbt/models/marts/star/dim_models.sql
+--  purpose:    model pricing dimension, conformed across both marts
+--  owner:      Luke Udell
+--  spdx:       MIT
+--  std:        [STD-04] [STD-13]
+--  adr:        none
+--  ticket:     none
+--  ticket-url: none
+--  created:    2026-07-19
+-- ============================================================
 with mdl as (
     select
         m.model_id

@@ -1,5 +1,16 @@
+# ============================================================
+#  file:       app/tests/test_db.py
+#  purpose:    tests baseline shaping and every database failure path with fakes
+#  owner:      Luke Udell
+#  spdx:       MIT
+#  std:        [STD-02]
+#  adr:        none
+#  ticket:     none
+#  ticket-url: none
+#  created:    2026-07-19
+# ============================================================
 """
-Tests for the telemetry-baseline module (db.py) — the piece that turns the
+Tests for the telemetry-baseline module (db.py), the piece that turns the
 500K-row star schema into calibrated forecaster defaults.
 
 The row-shaping logic is pure and tested exactly; the connection path is

@@ -1,12 +1,19 @@
-# =============================================================================
-# Andvari (LLM Telemetry): local stack
-# Extracted from the command_center monorepo, 2026-07-19. Self-contained: this
-# project owns its Postgres, so it runs without any sibling project present.
-#
-#   docker compose up -d db          # start Postgres
-#   docker compose --profile seed up # generate + load + dbt build
-#   docker compose up -d app         # the Streamlit app on :8501
-# =============================================================================
+# ============================================================
+#  file:       docker-compose.yml
+#  purpose:    self-contained local stack: postgres, app, one-shot seed and dbt
+#  owner:      Luke Udell
+#  spdx:       MIT
+#  std:        [STD-05] [STD-07]
+#  adr:        none
+#  ticket:     none
+#  ticket-url: none
+#  created:    2026-07-19
+# ============================================================
+# This project owns its Postgres, so it runs without any sibling present:
+#   docker compose up -d db                      # start Postgres
+#   docker compose --profile seed run --rm seed  # generate + load
+#   docker compose --profile seed run --rm dbt   # build models + tests
+#   docker compose up -d app                     # the Streamlit app on :8501
 services:
 
   db:

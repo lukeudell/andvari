@@ -1,4 +1,15 @@
 #!/usr/bin/env bash
+# ============================================================
+#  file:       data/seed.sh
+#  purpose:    one-shot seed: validate environment, generate, load
+#  owner:      Luke Udell
+#  spdx:       MIT
+#  std:        none
+#  adr:        none
+#  ticket:     none
+#  ticket-url: none
+#  created:    2026-07-19
+# ============================================================
 set -euo pipefail
 
 # andvari: generate synthetic data and load it.

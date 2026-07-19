@@ -1,9 +1,20 @@
+# ============================================================
+#  file:       app/forecast.py
+#  purpose:    pure forecast arithmetic for the token cost forecaster
+#  owner:      Luke Udell
+#  spdx:       MIT
+#  std:        [STD-01] [STD-02]
+#  adr:        none
+#  ticket:     none
+#  ticket-url: none
+#  created:    2026-07-19
+# ============================================================
 """
 Forecast arithmetic for the Token Forecaster.
 
 Pure functions, no Streamlit: everything a visitor's numbers depend on lives
 here so it can be unit-tested without a browser (see tests/test_forecast.py).
-The catalog is an explicit parameter — pricing has exactly one source
+The catalog is an explicit parameter: pricing has exactly one source
 (data/model_catalog.csv via catalog.py), never a module-level copy.
 """
 

@@ -1,3 +1,14 @@
+-- ============================================================
+--  file:       dbt/models/marts/snowflake/fct_api_requests_sf.sql
+--  purpose:    snowflake fact, one row per API request via the normalised user path
+--  owner:      Luke Udell
+--  spdx:       MIT
+--  std:        [STD-04] [STD-13]
+--  adr:        none
+--  ticket:     none
+--  ticket-url: none
+--  created:    2026-07-19
+-- ============================================================
 -- Grain: one row per API request event (same source as the star fact; the
 -- normalised user path is the entire difference under measurement).
 with req as (

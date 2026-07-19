@@ -1,3 +1,14 @@
+# ============================================================
+#  file:       app/app.py
+#  purpose:    streamlit UI for the token cost forecaster; logic lives in sibling modules
+#  owner:      Luke Udell
+#  spdx:       MIT
+#  std:        [STD-01] [STD-05]
+#  adr:        none
+#  ticket:     none
+#  ticket-url: none
+#  created:    2026-07-19
+# ============================================================
 """
 Andvari: Token Forecaster
 Interactive tool for projecting LLM API token volume, cost, revenue, and margin.
@@ -125,7 +136,7 @@ if BASELINE:
         f"{BASELINE['mau']:,} users · {BASELINE['window_days']}-day window"
     )
 else:
-    st.caption("Parametric mode — telemetry database offline; using scenario presets.")
+    st.caption("Parametric mode: telemetry database offline; using scenario presets.")
 
 # --- Sidebar: Scenario Presets + Inputs ---
 st.sidebar.markdown("## SCENARIO")

@@ -1,10 +1,21 @@
+# ============================================================
+#  file:       dbt/models/marts/snowflake/schema.yml
+#  purpose:    enforced contracts and tests for the snowflake mart
+#  owner:      Luke Udell
+#  spdx:       MIT
+#  std:        [STD-04] [STD-14]
+#  adr:        none
+#  ticket:     none
+#  ticket-url: none
+#  created:    2026-07-19
+# ============================================================
 version: 2
 
 models:
   - name: fct_api_requests_sf
     description: >
       Fact table for API request telemetry (Snowflake Schema).
-      Grain: one row per API request event — identical to fct_api_requests;
+      Grain: one row per API request event, identical to fct_api_requests;
       the normalized user path is the entire difference under measurement.
       The contract is enforced: schema drift fails the build at the boundary.
     config:

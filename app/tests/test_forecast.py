@@ -1,5 +1,16 @@
+# ============================================================
+#  file:       app/tests/test_forecast.py
+#  purpose:    pins the forecaster's growth, cost, and margin arithmetic
+#  owner:      Luke Udell
+#  spdx:       MIT
+#  std:        [STD-02]
+#  adr:        none
+#  ticket:     none
+#  ticket-url: none
+#  created:    2026-07-19
+# ============================================================
 """
-Unit tests for the forecaster's arithmetic — the numbers a visitor actually
+Unit tests for the forecaster's arithmetic, the numbers a visitor actually
 sees. Written before the extraction of ``forecast.py`` from ``app.py`` (TDD):
 they pin the exact growth, cost, and margin behaviour the UI has shipped with.
 

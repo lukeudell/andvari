@@ -1,5 +1,16 @@
+# ============================================================
+#  file:       app/tests/test_catalog.py
+#  purpose:    pins the catalog contract shared by generator, warehouse, and app
+#  owner:      Luke Udell
+#  spdx:       MIT
+#  std:        [STD-02] [STD-03]
+#  adr:        none
+#  ticket:     none
+#  ticket-url: none
+#  created:    2026-07-19
+# ============================================================
 """
-Tests for the model catalog loader — the app's single source of pricing truth.
+Tests for the model catalog loader, the app's single source of pricing truth.
 
 Written before ``catalog.py`` existed (TDD): pricing used to be hardcoded in
 three places (generator, app, dim_models); these tests pin the contract of the
@@ -76,7 +87,7 @@ class TestLoadCatalog:
             catalog.load_catalog(path)
 
     def test_empty_catalog_raises_value_error(self, tmp_path):
-        # An all-inactive catalog would render an app with zero models —
+        # An all-inactive catalog would render an app with zero models;
         # fail loudly instead of showing an empty forecaster.
         path = _write_csv(tmp_path, ["m1,fam,0.1,0.2,200,false,1.0,A"])
         with pytest.raises(ValueError):

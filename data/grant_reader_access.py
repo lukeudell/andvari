@@ -1,3 +1,14 @@
+# ============================================================
+#  file:       data/grant_reader_access.py
+#  purpose:    post-dbt grant reconciliation for the read-only reader role
+#  owner:      Luke Udell
+#  spdx:       MIT
+#  std:        [STD-05]
+#  adr:        none
+#  ticket:     none
+#  ticket-url: none
+#  created:    2026-07-19
+# ============================================================
 """
 Andvari: post-dbt permission grant
 Grants portfolio_reader SELECT on all dbt-created schemas.

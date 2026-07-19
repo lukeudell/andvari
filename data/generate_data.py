@@ -1,3 +1,14 @@
+# ============================================================
+#  file:       data/generate_data.py
+#  purpose:    seeded synthetic telemetry generator with realistic distributions
+#  owner:      Luke Udell
+#  spdx:       MIT
+#  std:        [STD-14]
+#  adr:        none
+#  ticket:     none
+#  ticket-url: none
+#  created:    2026-07-19
+# ============================================================
 """
 Andvari: synthetic data generator
 Generates realistic LLM API telemetry data with statistically accurate
@@ -28,7 +39,7 @@ SEED = 42
 
 def load_model_catalog(path: Path = CATALOG_PATH) -> list[dict]:
     """
-    Load the model catalog — the project's single source of pricing truth,
+    Load the model catalog, the project's single source of pricing truth,
     shared with the app (app/catalog.py) and, via models.csv, with dim_models.
     """
     df = pd.read_csv(path)
