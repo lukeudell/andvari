@@ -30,7 +30,7 @@ python -m pytest app/tests data/tests -q    # 158 Python tests, no database need
 | `dbt/` | 14 models: 5 staging views, 5 star, 4 snowflake. 143 declarative tests |
 | `data/` | Generator (fixed seed 42) and loader (Python 3.12) |
 | `docs/` | `CASE_STUDY.md` plus the original site pages, kept verbatim |
-| `project.yaml` | How this appears on lukeudell.com|
+| `project.yaml` | How this appears on lukeudell.com — the portfolio import contract |
 
 ## Lineage
 
@@ -109,5 +109,6 @@ grouped per ecosystem.
 
 ## Standards
 
-Built to `udell-blueprints` — the engineering standards mirrored at lukeudell.com/standards. PROJECT_NOTES.md records the ones that bite
-in this project.
+Built to `udell-blueprints`, the engineering standards mirrored at
+[lukeudell.com/standards](https://lukeudell.com/standards/). `PROJECT_NOTES.md`
+records the ones that bite in this project.
