@@ -1,5 +1,11 @@
 # Andvari
 
+[![CI](https://github.com/lukeudell/andvari/actions/workflows/ci.yml/badge.svg)](https://github.com/lukeudell/andvari/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
+![dbt 1.9](https://img.shields.io/badge/dbt-1.9-FF694B?logo=dbt&logoColor=white)
+![Postgres 16](https://img.shields.io/badge/postgres-16-4169E1?logo=postgresql&logoColor=white)
+
 **LLM API telemetry, end to end.** Synthetic Claude-style API traffic generated with
 domain-appropriate statistical distributions, loaded into Postgres, modelled two ways
 with dbt (star *and* snowflake, over the same source, so the trade-off can be
@@ -27,7 +33,7 @@ python -m pytest app/tests data/tests -q    # 158 Python tests, no database need
 | Path | What |
 |---|---|
 | `app/` | Streamlit cost forecaster (Python 3.12). Calibrates its defaults from the star schema via the read-only role; falls back to parametric mode when the database is absent |
-| `dbt/` | 14 models: 5 staging views, 5 star, 4 snowflake. 143 declarative tests |
+| `dbt/` | 14 models: 5 staging views, 5 star, 4 snowflake. 145 data tests, contracts enforced on the marts |
 | `data/` | Generator (fixed seed 42) and loader (Python 3.12) |
 | `docs/` | `CASE_STUDY.md` plus the original site pages, kept verbatim |
 | `project.yaml` | How this appears on lukeudell.com — the portfolio import contract |
@@ -95,8 +101,8 @@ performance — which, here, it does not.
 | Job | What |
 |---|---|
 | App tests | theme/XSS, forecast arithmetic, catalog, and DB-baseline suites, on Python 3.12 |
-| Pipeline | generate, load and `dbt build` against a real Postgres service container |
-| Security | `pip-audit` (blocking) and a Trivy image scan |
+| Pipeline | generator property tests, then generate → load → `dbt build` against a real Postgres service container, then `sqlfluff` lint and a static dbt-docs artifact |
+| Security | gitleaks over full history, `bandit` at medium+, `pip-audit` (all blocking), and a Trivy image scan |
 
 The pipeline job is the one worth having: it proves the generator, loader and
 models still agree, against the same engine production uses. It runs `dbt build`
