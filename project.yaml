@@ -8,11 +8,9 @@
 contract_version: "1.1"
 slug: llm-telemetry
 title: LLM Telemetry
-summary: Synthetic Claude-style API telemetry through a full analytics pipeline -- generation, dimensional modelling, BI, forecasting.
-# repo_url: https://github.com/lukeudell/andvari
-#   ^ commented out deliberately: this repo is not pushed yet, so the link would
-#     404. Uncomment once it exists. A dead 'git clone' button is exactly the kind
-#     of unbacked claim the rest of this file was rewritten to avoid.
+summary: Synthetic Claude-style API telemetry through a full analytics pipeline -- generation, dimensional modelling, measured schema comparison, forecasting.
+repo_url: https://github.com/lukeudell/andvari
+# flip published once the repo is pushed and the link resolves
 published: false
 tags: [dbt, postgres, python, streamlit]
 
@@ -23,8 +21,9 @@ sections:
     body: |
       A full-stack data engineering demonstration: synthetic LLM API telemetry
       processed through a modern analytics pipeline. From generation with
-      statistically realistic distributions, through Kimball dimensional modelling,
-      to self-hosted BI and an interactive cost forecaster.
+      statistically realistic distributions, through Kimball dimensional modelling
+      and a measured star-vs-snowflake comparison, to an interactive cost
+      forecaster calibrated from the warehouse itself.
 
       500K API requests across 5,000 users, 5 models and 5 endpoints over a 91-day
       window, modelled on real-world patterns from APIs like Anthropic's Claude.
