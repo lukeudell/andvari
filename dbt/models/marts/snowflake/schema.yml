@@ -1,0 +1,175 @@
+version: 2
+
+models:
+  - name: fct_api_requests_sf
+    description: >
+      Fact table for API request telemetry (Snowflake Schema).
+      Identical grain to fct_api_requests but references normalized user dimension.
+    columns:
+      - name: request_id
+        description: "Natural key: unique identifier for each API request"
+        tests:
+          - not_null
+          - unique
+      - name: user_key
+        description: "Surrogate key to dim_users_sf"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_users_sf')
+              field: user_key
+      - name: model_key
+        description: "Surrogate key to dim_models"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_models')
+              field: model_key
+      - name: date_key
+        description: "Surrogate key to dim_date"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_key
+      - name: endpoint_key
+        description: "Surrogate key to dim_endpoints"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_endpoints')
+              field: endpoint_key
+      - name: latency_ms
+        description: "Server-side latency in milliseconds"
+        tests:
+          - not_null
+      - name: tokens_input
+        description: "Number of input tokens"
+        tests:
+          - not_null
+      - name: tokens_output
+        description: "Number of output tokens generated"
+        tests:
+          - not_null
+      - name: tokens_total
+        description: "Sum of input and output tokens"
+        tests:
+          - not_null
+      - name: cost_usd
+        description: "Computed cost in USD"
+        tests:
+          - not_null
+      - name: http_status
+        description: "HTTP response status code"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [200, 401, 429, 500]
+      - name: safety_flag
+        description: "Whether the request triggered safety classification"
+        tests:
+          - not_null
+      - name: request_timestamp
+        description: "Original UTC timestamp"
+        tests:
+          - not_null
+
+  - name: dim_users_sf
+    description: >
+      Normalized user dimension (Snowflake Schema).
+      Company and billing tier extracted into separate dimension tables.
+    columns:
+      - name: user_key
+        description: "Surrogate key (MD5 hash of user_id)"
+        tests:
+          - not_null
+          - unique
+      - name: user_id
+        description: "Natural key: unique user identifier"
+        tests:
+          - not_null
+          - unique
+      - name: company_key
+        description: "Foreign key to dim_companies"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_companies')
+              field: company_key
+      - name: billing_tier_key
+        description: "Foreign key to dim_billing_tiers"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_billing_tiers')
+              field: billing_tier_key
+      - name: signup_date
+        description: "Account creation date"
+        tests:
+          - not_null
+      - name: region
+        description: "Geographic region"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["us-east", "us-west", "eu-west", "eu-central", "ap-southeast", "ap-northeast"]
+
+  - name: dim_companies
+    description: >
+      Company dimension (Snowflake Schema, normalized from dim_users).
+      One row per distinct company name.
+    columns:
+      - name: company_key
+        description: "Surrogate key (MD5 hash of company_name)"
+        tests:
+          - not_null
+          - unique
+      - name: company_name
+        description: "Organization name"
+        tests:
+          - not_null
+          - unique
+      - name: industry
+        description: "Industry vertical"
+        tests:
+          - not_null
+      - name: company_size_band
+        description: "Derived size band (Small/Medium/Large)"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["Small", "Medium", "Large"]
+      - name: hq_country
+        description: "Headquarters country code"
+        tests:
+          - not_null
+
+  - name: dim_billing_tiers
+    description: >
+      Billing tier dimension (Snowflake Schema, normalized from dim_users).
+      One row per pricing tier with rate limits and pricing.
+    columns:
+      - name: billing_tier_key
+        description: "Surrogate key (MD5 hash of tier_name)"
+        tests:
+          - not_null
+          - unique
+      - name: tier_name
+        description: "Tier display name"
+        tests:
+          - not_null
+          - unique
+          - accepted_values:
+              values: ["Free", "Starter", "Pro", "Enterprise"]
+      - name: monthly_price_usd
+        description: "Monthly subscription price in USD"
+        tests:
+          - not_null
+      - name: rate_limit_rpm
+        description: "Rate limit in requests per minute"
+        tests:
+          - not_null
+      - name: has_priority_access
+        description: "Whether the tier includes priority queue access"
+        tests:
+          - not_null
