@@ -1,0 +1,224 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import RetroWindow from '../../../components/RetroWindow.astro';
+import StatTicker from '../../../components/StatTicker.astro';
+import CodePanel from '../../../components/CodePanel.astro';
+import WhiteRabbit from '../../../components/WhiteRabbit.astro';
+---
+
+<BaseLayout title="Engineering Rigor" description="Code quality, data integrity, dependency management, and infrastructure discipline.">
+  <section class="mx-auto max-w-5xl px-4 sm:px-6 py-12">
+    <h1 class="font-heading text-2xl sm:text-4xl tracking-widest glow-cyan mb-2">
+      ENGINEERING RIGOR
+    </h1>
+    <p class="font-terminal text-sm text-[var(--color-green)] mb-10">
+      &gt; CODE QUALITY // DATA INTEGRITY // INFRASTRUCTURE DISCIPLINE
+    </p>
+
+    <div class="space-y-8 stagger-children">
+      <!-- Headline stats -->
+      <RetroWindow title="QUALITY METRICS">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <StatTicker label="dbt Tests" value="143" color="green" />
+          <StatTicker label="npm CVEs" value="0" color="green" />
+          <StatTicker label="Services" value="6" color="cyan" />
+          <StatTicker label="Pinned Deps" value="100%" color="cyan" />
+        </div>
+      </RetroWindow>
+
+      <!-- dbt Test Coverage -->
+      <RetroWindow title="DATA INTEGRITY: dbt TEST SUITE" class="animate-border-pulse">
+        <p class="font-body text-sm text-[var(--color-white)]/80 mb-4 leading-relaxed">
+          Every model in the pipeline is tested for correctness. 143 tests across 3 schema layers
+          ensure that transformations produce valid, complete, referentially-intact data.
+        </p>
+        <div class="grid sm:grid-cols-2 gap-3 font-terminal text-xs">
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)] mb-1">NOT_NULL</p>
+            <p class="text-[var(--color-white)]/50">Every column that must be populated is tested: no silent NULLs propagating through the pipeline.</p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)] mb-1">UNIQUE</p>
+            <p class="text-[var(--color-white)]/50">All primary and surrogate keys verified unique: catches fan-out bugs before they corrupt aggregations.</p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)] mb-1">RELATIONSHIPS</p>
+            <p class="text-[var(--color-white)]/50">Every foreign key validated against its parent dimension: no orphaned fact rows, no broken joins.</p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)] mb-1">ACCEPTED_VALUES</p>
+            <p class="text-[var(--color-white)]/50">Enums constrained at the data layer: billing tiers, regions, HTTP codes, size bands all validated.</p>
+          </div>
+        </div>
+      </RetroWindow>
+
+      <!-- Real bug caught -->
+      <RetroWindow title="BUG CAUGHT BY TESTS: dim_companies FAN-OUT">
+        <div class="font-body text-sm text-[var(--color-white)]/80 leading-relaxed space-y-3">
+          <p>
+            During development, a <code class="font-terminal text-[var(--color-pink)]">SELECT DISTINCT company_name, industry</code>
+            query produced <strong class="text-[var(--color-pink)]">6,457 rows</strong> instead of the expected ~4,900.
+            Faker assigned multiple industries per company name, causing a fan-out that silently inflated
+            the fact table from 500K to 640K rows.
+          </p>
+          <p>
+            The <code class="font-terminal text-[var(--color-green)]">unique</code> test on <code class="font-terminal text-[var(--color-green)]">company_key</code>
+            caught this immediately. Fix: aggregate with <code class="font-terminal text-[var(--color-cyan)]">mode() WITHIN GROUP</code>
+            to pick the most common industry per company.
+          </p>
+        </div>
+      </RetroWindow>
+
+      <CodePanel
+        title="dim_companies.sql (the fix)"
+        language="sql"
+        code={`companies as (
+    select
+        company_name,
+        -- Pick the most common industry per company to avoid fan-out
+        mode() within group (order by industry) as industry
+    from users
+    group by company_name
+)
+-- Result: exactly one row per company, fact table stays at 500K`}
+      />
+
+      <!-- Dependency Management -->
+      <RetroWindow title="DEPENDENCY MANAGEMENT">
+        <div class="font-body text-sm text-[var(--color-white)]/80 leading-relaxed space-y-3 mb-4">
+          <p>
+            Every dependency is <strong class="text-[var(--color-green)]">pinned to an exact version</strong>.
+            No ranges, no floating. Lock files are committed. Monthly audit cycle for CVEs.
+          </p>
+        </div>
+        <div class="space-y-3 font-terminal text-xs">
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-[var(--color-cyan)]">Frontend (npm)</span>
+              <span class="text-[var(--color-green)]">0 vulnerabilities</span>
+            </div>
+            <p class="text-[var(--color-white)]/50">
+              Astro 5.17+, Tailwind 4.2+, Mermaid 11.13.0 (upgraded from 11.6.0 to resolve 7 moderate CVEs), Prism 1.30.0
+            </p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-[var(--color-cyan)]">Data Pipeline (pip)</span>
+              <span class="text-[var(--color-green)]">Pinned</span>
+            </div>
+            <p class="text-[var(--color-white)]/50">
+              psycopg2-binary 2.9.10, pandas 2.2.3, numpy 2.2.3, faker 37.1.0, scipy 1.15.2
+            </p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-[var(--color-cyan)]">dbt (pip)</span>
+              <span class="text-[var(--color-green)]">Pinned</span>
+            </div>
+            <p class="text-[var(--color-white)]/50">
+              dbt-core 1.9.4, dbt-postgres 1.9.1, dbt_utils 1.3.0
+            </p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-[var(--color-cyan)]">Infrastructure (Docker)</span>
+              <span class="text-[var(--color-green)]">Pinned</span>
+            </div>
+            <p class="text-[var(--color-white)]/50">
+              PostgreSQL 16, Metabase v0.59.1, SonarQube 26.3.0, Streamlit 1.44.0
+            </p>
+          </div>
+        </div>
+      </RetroWindow>
+
+      <!-- Access Control -->
+      <RetroWindow title="ACCESS CONTROL & ISOLATION">
+        <div class="space-y-3 font-terminal text-sm">
+          <div class="flex items-start gap-3">
+            <span class="text-[var(--color-green)] shrink-0 mt-0.5">&gt;</span>
+            <div>
+              <span class="text-[var(--color-cyan)]">Read-only role</span>
+              <span class="text-[var(--color-white)]/50">: <code>portfolio_reader</code> has SELECT-only access. INSERT/UPDATE/DELETE verified denied at load time.</span>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="text-[var(--color-green)] shrink-0 mt-0.5">&gt;</span>
+            <div>
+              <span class="text-[var(--color-cyan)]">Schema isolation</span>
+              <span class="text-[var(--color-white)]/50">: raw_staging, public_star, public_snowflake are separate schemas. OLTP and OLAP never share a schema.</span>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="text-[var(--color-green)] shrink-0 mt-0.5">&gt;</span>
+            <div>
+              <span class="text-[var(--color-cyan)]">No hardcoded credentials</span>
+              <span class="text-[var(--color-white)]/50">: all secrets via .env (gitignored). Docker services use environment variable injection.</span>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="text-[var(--color-green)] shrink-0 mt-0.5">&gt;</span>
+            <div>
+              <span class="text-[var(--color-cyan)]">Network isolation</span>
+              <span class="text-[var(--color-white)]/50">: Traefik reverse proxy as sole entry point. Databases and internal services on isolated Docker network. Only ports 80/443 exposed.</span>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="text-[var(--color-green)] shrink-0 mt-0.5">&gt;</span>
+            <div>
+              <span class="text-[var(--color-cyan)]">Path-based access control</span>
+              <span class="text-[var(--color-white)]/50">: Metabase admin UI blocked from external access. Only <code>/public/</code> dashboard endpoints routed through Traefik.</span>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="text-[var(--color-green)] shrink-0 mt-0.5">&gt;</span>
+            <div>
+              <span class="text-[var(--color-cyan)]">Self-hosted fonts</span>
+              <span class="text-[var(--color-white)]/50">: no Google CDN requests. Zero external runtime dependencies. Verify in DevTools Network tab.</span>
+            </div>
+          </div>
+        </div>
+      </RetroWindow>
+
+      <!-- Infrastructure as Code -->
+      <RetroWindow title="INFRASTRUCTURE DISCIPLINE">
+        <div class="grid sm:grid-cols-2 gap-3 font-terminal text-xs">
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)] mb-1">DOCKER HEALTHCHECKS</p>
+            <p class="text-[var(--color-white)]/50">All 6 services have container-level healthchecks. pg_isready for databases, HTTP endpoints for apps. Compose dependency ordering via service_healthy conditions.</p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)] mb-1">IDEMPOTENT OPERATIONS</p>
+            <p class="text-[var(--color-white)]/50">Data loading uses DROP IF EXISTS + CREATE. dbt models are fully rerunnable. No manual state, no drift: tear down and rebuild in minutes.</p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)] mb-1">STATIC ANALYSIS</p>
+            <p class="text-[var(--color-white)]/50">SonarQube Community Edition 26.3.0 runs self-hosted. Quality gates enforce: zero critical issues, coverage thresholds, no unreviewed security hotspots, duplication limits.</p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)] mb-1">TECHNOLOGY SOVEREIGNTY</p>
+            <p class="text-[var(--color-white)]/50">Every component is open-source and self-hostable. No runtime dependency on big-tech hosted services. Full stack reproducible from docker compose up.</p>
+          </div>
+        </div>
+      </RetroWindow>
+
+      <!-- Known Limitations (honest, brief; no CVE details on public page) -->
+      <RetroWindow title="KNOWN LIMITATIONS">
+        <div class="font-terminal text-xs text-[var(--color-white)]/50 space-y-2">
+          <p>
+            All known upstream dependency vulnerabilities are triaged, documented internally,
+            and tracked with remediation timelines. Accepted risks are justified per the CVE
+            response policy in the project's engineering standards.
+          </p>
+          <p>
+            <span class="text-[var(--color-white)]/40">PQC:</span> This project uses no custom cryptographic operations.
+            TLS at the transport layer is the only crypto dependency. Post-quantum readiness
+            (ML-KEM, ML-DSA, SHA-3) is a documented architectural principle for future systems.
+          </p>
+        </div>
+      </RetroWindow>
+
+      <!-- CTF Entry Point: White Rabbit Easter Egg -->
+      <WhiteRabbit />
+    </div>
+  </section>
+</BaseLayout>

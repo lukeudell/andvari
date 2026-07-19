@@ -1,0 +1,133 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import RetroWindow from '../../../components/RetroWindow.astro';
+import StatTicker from '../../../components/StatTicker.astro';
+---
+
+<BaseLayout title="LLM Telemetry" description="Synthetic LLM API telemetry pipeline: PostgreSQL, dbt, Metabase, Streamlit.">
+  <section class="mx-auto max-w-5xl px-4 sm:px-6 py-12">
+    <h1 class="font-heading text-2xl sm:text-4xl tracking-widest glow-cyan mb-2">
+      LLM TELEMETRY
+    </h1>
+    <p class="font-terminal text-sm text-[var(--color-green)] mb-10">
+      &gt; SYNTHETIC API TELEMETRY THROUGH A MODERN ANALYTICS PIPELINE
+    </p>
+
+    <div class="space-y-8 stagger-children">
+      <!-- Key stats -->
+      <RetroWindow title="SYSTEM TELEMETRY">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <StatTicker label="Fact Rows" value="500K" color="cyan" />
+          <StatTicker label="dbt Models" value="14" color="green" />
+          <StatTicker label="Test Cases" value="143" color="pink" />
+          <StatTicker label="Uptime" value="99.9%" color="amber" />
+        </div>
+      </RetroWindow>
+
+      <!-- Project overview -->
+      <RetroWindow title="PROJECT OVERVIEW">
+        <div class="font-body text-sm text-[var(--color-white)]/80 leading-relaxed space-y-4">
+          <p>
+            A full-stack data engineering demonstration: synthetic LLM API telemetry processed through
+            a modern analytics pipeline. From data generation with statistically realistic distributions
+            through Kimball dimensional modeling, to self-hosted BI dashboards and interactive forecasting.
+          </p>
+          <p>
+            The domain simulates a large-language-model API platform, modeled on real-world patterns
+            from APIs like Anthropic's Claude. 500K API requests across 5,000 users, 5 models, and
+            5 endpoints over a 91-day window.
+          </p>
+        </div>
+      </RetroWindow>
+
+      <!-- Pipeline stages (compact) -->
+      <RetroWindow title="PIPELINE">
+        <div class="grid sm:grid-cols-4 gap-3 font-terminal text-xs">
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-cyan)]/30">
+            <p class="text-[var(--color-cyan)] mb-1">01 GENERATE</p>
+            <p class="text-[var(--color-white)]/50">Python + NumPy/SciPy</p>
+            <p class="text-[var(--color-white)]/40">Log-normal, Pareto, sinusoidal distributions</p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-green)]/30">
+            <p class="text-[var(--color-green)] mb-1">02 LOAD</p>
+            <p class="text-[var(--color-white)]/50">PostgreSQL 16</p>
+            <p class="text-[var(--color-white)]/40">COPY-based bulk ingest, read-only roles</p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-pink)]/30">
+            <p class="text-[var(--color-pink)] mb-1">03 TRANSFORM</p>
+            <p class="text-[var(--color-white)]/50">dbt Core</p>
+            <p class="text-[var(--color-white)]/40">Star + snowflake schemas, 143 tests</p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-amber)]/30">
+            <p class="text-[var(--color-amber)] mb-1">04 VISUALIZE</p>
+            <p class="text-[var(--color-white)]/50">Metabase + Streamlit</p>
+            <p class="text-[var(--color-white)]/40">Self-hosted dashboards + forecasting</p>
+          </div>
+        </div>
+      </RetroWindow>
+
+      <!-- Tech stack -->
+      <RetroWindow title="TECHNOLOGY STACK">
+        <div class="grid sm:grid-cols-2 gap-3 font-terminal text-xs">
+          <div class="space-y-2">
+            <p class="text-[var(--color-amber)] mb-1">DATA LAYER</p>
+            <div class="space-y-1 text-[var(--color-white)]/60">
+              <p>PostgreSQL 16: analytical database</p>
+              <p>dbt Core 1.9.4: transformation framework</p>
+              <p>Python + NumPy/SciPy: data generation</p>
+              <p>Faker: synthetic PII generation</p>
+            </div>
+          </div>
+          <div class="space-y-2">
+            <p class="text-[var(--color-amber)] mb-1">PRESENTATION LAYER</p>
+            <div class="space-y-1 text-[var(--color-white)]/60">
+              <p>Metabase OSS v0.59.1: BI dashboards</p>
+              <p>Streamlit 1.44.0: interactive forecasting</p>
+              <p>Astro + TypeScript: static site</p>
+              <p>Docker Compose v2: infrastructure</p>
+            </div>
+          </div>
+        </div>
+      </RetroWindow>
+
+      <!-- Navigation to sub-pages -->
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <a href="/projects/llm-telemetry/models/" class="group block">
+          <RetroWindow title="MODELS">
+            <p class="font-terminal text-sm text-[var(--color-cyan)] group-hover:text-[var(--color-pink)] transition-colors">
+              Star & Snowflake schemas, ERDs, dbt lineage
+            </p>
+          </RetroWindow>
+        </a>
+        <a href="/projects/llm-telemetry/pipeline/" class="group block">
+          <RetroWindow title="PIPELINE">
+            <p class="font-terminal text-sm text-[var(--color-cyan)] group-hover:text-[var(--color-pink)] transition-colors">
+              End-to-end architecture and infrastructure
+            </p>
+          </RetroWindow>
+        </a>
+        <a href="/projects/llm-telemetry/dashboard/" class="group block">
+          <RetroWindow title="DASHBOARD">
+            <p class="font-terminal text-sm text-[var(--color-cyan)] group-hover:text-[var(--color-pink)] transition-colors">
+              Executive metrics via self-hosted Metabase
+            </p>
+          </RetroWindow>
+        </a>
+        <a href="/projects/llm-telemetry/forecaster/" class="group block">
+          <RetroWindow title="FORECASTER">
+            <p class="font-terminal text-sm text-[var(--color-cyan)] group-hover:text-[var(--color-pink)] transition-colors">
+              Token usage forecasting & cost modeling
+            </p>
+          </RetroWindow>
+        </a>
+        <a href="/projects/llm-telemetry/quality/" class="group block">
+          <RetroWindow title="QUALITY">
+            <p class="font-terminal text-sm text-[var(--color-cyan)] group-hover:text-[var(--color-pink)] transition-colors">
+              143 dbt tests, dependency discipline, access control
+            </p>
+          </RetroWindow>
+        </a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

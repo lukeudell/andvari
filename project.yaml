@@ -1,0 +1,106 @@
+# project.yaml for andvari (LLM Telemetry)
+# The import/export format of the portfolio's project content contract.
+# Import at /admin/import on lukeudell.com; the diff is shown before anything applies.
+# Brief: luke-udell-portfolio/docs/contracts/project-config-handoff.md
+#
+# DRAFT: written at extraction from the narrative in docs/CASE_STUDY.md.
+# The claims here describe what the code does, not what the old site said.
+contract_version: "1.1"
+slug: llm-telemetry
+title: LLM Telemetry
+summary: Synthetic Claude-style API telemetry through a full analytics pipeline -- generation, dimensional modelling, BI, forecasting.
+# repo_url: https://github.com/lukeudell/andvari
+#   ^ commented out deliberately: this repo is not pushed yet, so the link would
+#     404. Uncomment once it exists. A dead 'git clone' button is exactly the kind
+#     of unbacked claim the rest of this file was rewritten to avoid.
+published: false
+tags: [dbt, postgres, python, streamlit]
+
+sections:
+  - slug: overview
+    title: Overview
+    published: true
+    body: |
+      A full-stack data engineering demonstration: synthetic LLM API telemetry
+      processed through a modern analytics pipeline. From generation with
+      statistically realistic distributions, through Kimball dimensional modelling,
+      to self-hosted BI and an interactive cost forecaster.
+
+      500K API requests across 5,000 users, 5 models and 5 endpoints over a 91-day
+      window, modelled on real-world patterns from APIs like Anthropic's Claude.
+
+      Everything self-hosted and open source. No managed warehouse, no third-party
+      analytics, no vendor account needed to run it.
+
+  - slug: generation
+    title: Data Generation
+    published: true
+    body: |
+      The synthetic dataset is not random noise. Each column uses a
+      domain-appropriate statistical distribution, because realistic data exposes
+      real query-planner behaviour and index selectivity -- uniform random data
+      makes every plan look alike.
+
+      | Column | Distribution | Why |
+      |---|---|---|
+      | Latency | Log-normal, mu 6.5, sigma 0.8 | Clusters around a median with a heavy right tail from cold starts and large context windows |
+      | Tokens | Pareto, alpha 1.5 | A small fraction of enterprise users send massive context windows |
+      | Traffic | Sinusoidal via rejection sampling | Minus 85 percent overnight, minus 40 percent at weekends |
+      | HTTP status | Weighted categorical | 200/429/500/401 at 94/3/2/1 percent |
+      | Safety flags | Bernoulli, p 0.008 | A textbook Bernoulli trial |
+
+      Seed 42 throughout, so the dataset is reproducible.
+
+  - slug: models
+    title: Data Models
+    published: true
+    body: |
+      The same raw data is modelled twice, on purpose.
+
+      **Star** -- one fact table with four conformed, denormalised dimensions.
+      Industry lives directly on the user dimension.
+
+      **Snowflake** -- the normalised counterpart, where users point at companies
+      and billing tiers, reusing the star's conformed dimensions.
+
+      Building both is what makes the trade-off measurable rather than theoretical.
+
+  - slug: performance
+    title: Why the Star Schema Wins Here
+    published: true
+    body: |
+      One business question -- total cost by industry -- asked against both schemas,
+      measured with EXPLAIN ANALYZE:
+
+      | Query | Schema | Joins | Time |
+      |---|---|---|---|
+      | Cost by model | star | 1 | 197 ms |
+      | Cost by industry | snowflake | 3 | 206 ms |
+      | Cost by industry | star | 1 | **51 ms** |
+
+      Four times faster, because industry is denormalised onto the user dimension
+      and the planner can parallelise a single join.
+
+      This is the Kimball trade-off stated precisely: storage redundancy buys query
+      speed. The snowflake schema earns its cost when dimension tables are large,
+      frequently updated, or when write-path consistency matters more than read
+      performance. Here, none of those hold.
+
+  - slug: quality
+    title: A Bug the Tests Caught
+    published: true
+    body: |
+      The company dimension was built with `SELECT DISTINCT company_name, industry`.
+      It returned 6,457 rows against roughly 4,900 real companies, because the
+      generator had assigned multiple industries to the same company name.
+
+      Those surplus rows fanned out the join and silently inflated the fact table
+      from 500K to 640K rows -- a 28 percent error in every revenue figure
+      downstream. Nothing looked broken. The pipeline ran green and the dashboards
+      rendered.
+
+      The `unique` test on the company key failed. The fix was `mode() WITHIN GROUP`,
+      picking one industry per company deterministically.
+
+      That is the argument for declarative data tests in a paragraph: without one,
+      every number was wrong and every surface said it was fine.

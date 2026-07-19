@@ -1,0 +1,73 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import RetroWindow from '../../../components/RetroWindow.astro';
+
+// In production, Metabase public dashboard is proxied through Traefik at /metabase/
+// In dev, use localhost:3000 directly
+const dashboardUuid = '78ce3236-6c1c-480b-a19d-f802585457c6';
+const isProd = import.meta.env.PROD;
+const metabaseUrl = isProd
+  ? `/metabase/public/dashboard/${dashboardUuid}`
+  : import.meta.env.PUBLIC_METABASE_EMBED_URL || `http://localhost:3000/public/dashboard/${dashboardUuid}`;
+---
+
+<BaseLayout title="Executive Metrics" description="Self-hosted Metabase dashboard: LLM API telemetry executive overview.">
+  <section class="mx-auto max-w-6xl px-4 sm:px-6 py-12">
+    <h1 class="font-heading text-2xl sm:text-4xl tracking-widest glow-cyan mb-2">
+      EXECUTIVE METRICS
+    </h1>
+    <p class="font-terminal text-sm text-[var(--color-green)] mb-10">
+      &gt; SELF-HOSTED METABASE // PUBLIC DASHBOARD EMBED
+    </p>
+
+    <!-- Desktop: embedded iframe -->
+    <div class="hidden md:block">
+      <RetroWindow title="METABASE: EXECUTIVE OVERVIEW">
+        <div class="relative w-full" style="padding-bottom: 75%;">
+          <iframe
+            src={metabaseUrl}
+            class="absolute inset-0 w-full h-full rounded"
+            title="Executive Metrics Dashboard"
+            loading="lazy"
+            sandbox="allow-scripts allow-same-origin allow-popups"
+          ></iframe>
+        </div>
+      </RetroWindow>
+    </div>
+
+    <!-- Mobile: link out instead of iframe -->
+    <div class="md:hidden">
+      <RetroWindow title="METABASE: EXECUTIVE OVERVIEW">
+        <div class="text-center py-8">
+          <p class="font-body text-sm text-[var(--color-white)]/70 mb-5 leading-relaxed">
+            This dashboard needs a wider screen to be useful. Tap below to open the full view in a new tab.
+          </p>
+          <a
+            href={metabaseUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-block font-terminal text-base font-bold px-6 py-3 border-2 border-[var(--color-cyan)] text-[var(--color-cyan)] bg-[var(--color-cyan)]/5 rounded hover:bg-[var(--color-cyan)]/15 transition-colors"
+          >
+            [OPEN DASHBOARD IN NEW TAB]
+          </a>
+        </div>
+      </RetroWindow>
+    </div>
+
+    <!-- Context -->
+    <div class="mt-8">
+      <RetroWindow title="DATA SOURCE">
+        <div class="font-body text-sm text-[var(--color-white)]/80 leading-relaxed space-y-2">
+          <p>
+            This dashboard queries the <strong class="text-[var(--color-cyan)]">star schema</strong> in
+            the portfolio database via a read-only <code class="font-terminal text-[var(--color-green)]">portfolio_reader</code> role.
+          </p>
+          <p>
+            Metabase OSS runs self-hosted in Docker behind a Traefik reverse proxy, connecting
+            to PostgreSQL over an isolated internal network. No data leaves the host.
+          </p>
+        </div>
+      </RetroWindow>
+    </div>
+  </section>
+</BaseLayout>

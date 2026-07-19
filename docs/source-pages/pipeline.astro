@@ -1,0 +1,308 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import RetroWindow from '../../../components/RetroWindow.astro';
+import CodePanel from '../../../components/CodePanel.astro';
+import MermaidDiagram from '../../../components/MermaidDiagram.astro';
+
+const lineageDAG = `flowchart LR
+    subgraph SRC["raw_staging"]
+        api_requests["api_requests"]
+        users["users"]
+        models["models"]
+        endpoints["endpoints"]
+        dates["dates"]
+    end
+
+    subgraph STG["staging (views)"]
+        stg_api["stg_api_requests"]
+        stg_users["stg_users"]
+        stg_models["stg_models"]
+        stg_endpoints["stg_endpoints"]
+        stg_dates["stg_dates"]
+    end
+
+    subgraph STAR["public_star"]
+        dim_users["dim_users"]
+        dim_models_s["dim_models"]
+        dim_date_s["dim_date"]
+        dim_endpoints_s["dim_endpoints"]
+        fct_star["fct_api_requests"]
+    end
+
+    subgraph SNOW["public_snowflake"]
+        dim_companies["dim_companies"]
+        dim_billing["dim_billing_tiers"]
+        dim_users_sf["dim_users_sf"]
+        dim_models_sf["dim_models"]
+        dim_date_sf["dim_date"]
+        dim_endpoints_sf["dim_endpoints"]
+        fct_snow["fct_api_requests_sf"]
+    end
+
+    api_requests --> stg_api
+    users --> stg_users
+    models --> stg_models
+    endpoints --> stg_endpoints
+    dates --> stg_dates
+
+    stg_users --> dim_users
+    stg_models --> dim_models_s
+    stg_dates --> dim_date_s
+    stg_endpoints --> dim_endpoints_s
+    stg_api --> fct_star
+    dim_users --> fct_star
+    dim_models_s --> fct_star
+    dim_date_s --> fct_star
+    dim_endpoints_s --> fct_star
+
+    stg_users --> dim_companies
+    stg_users --> dim_users_sf
+    dim_companies --> dim_users_sf
+    dim_billing --> dim_users_sf
+    stg_models --> dim_models_sf
+    stg_dates --> dim_date_sf
+    stg_endpoints --> dim_endpoints_sf
+    stg_api --> fct_snow
+    dim_users_sf --> fct_snow
+    dim_models_sf --> fct_snow
+    dim_date_sf --> fct_snow
+    dim_endpoints_sf --> fct_snow`;
+---
+
+<BaseLayout title="Data Pipeline" description="End-to-end pipeline architecture: data generation, loading, dbt transformation, and visualization.">
+  <section class="mx-auto max-w-5xl px-4 sm:px-6 py-12">
+    <h1 class="font-heading text-2xl sm:text-4xl tracking-widest glow-cyan mb-2">
+      DATA PIPELINE
+    </h1>
+    <p class="font-terminal text-sm text-[var(--color-green)] mb-10">
+      &gt; END-TO-END ARCHITECTURE // GENERATE → LOAD → TRANSFORM → VISUALIZE
+    </p>
+
+    <div class="space-y-8 stagger-children">
+      <!-- Pipeline stages -->
+      <RetroWindow title="PIPELINE STAGES">
+        <div class="space-y-6">
+          <!-- Stage 1 -->
+          <div class="flex gap-4">
+            <div class="shrink-0 w-10 h-10 rounded-full border-2 border-[var(--color-cyan)] flex items-center justify-center font-terminal text-sm text-[var(--color-cyan)]">01</div>
+            <div>
+              <p class="font-terminal text-[var(--color-cyan)] mb-1">GENERATE: Synthetic Telemetry</p>
+              <p class="font-body text-sm text-[var(--color-white)]/70">
+                Python script generates 500K realistic LLM API requests using statistical distributions:
+                log-normal latency, Pareto token counts, sinusoidal diurnal + weekly traffic patterns,
+                weighted HTTP status codes, Bernoulli safety flags.
+              </p>
+            </div>
+          </div>
+
+          <div class="ml-5 border-l-2 border-[var(--color-border)] h-4"></div>
+
+          <!-- Stage 2 -->
+          <div class="flex gap-4">
+            <div class="shrink-0 w-10 h-10 rounded-full border-2 border-[var(--color-green)] flex items-center justify-center font-terminal text-sm text-[var(--color-green)]">02</div>
+            <div>
+              <p class="font-terminal text-[var(--color-green)] mb-1">LOAD: PostgreSQL Bulk Ingest</p>
+              <p class="font-body text-sm text-[var(--color-white)]/70">
+                COPY-based bulk loading into raw_staging schema. Creates read-only portfolio_reader role.
+                Idempotent: DROP IF EXISTS + CREATE pattern for safe re-runs.
+              </p>
+            </div>
+          </div>
+
+          <div class="ml-5 border-l-2 border-[var(--color-border)] h-4"></div>
+
+          <!-- Stage 3 -->
+          <div class="flex gap-4">
+            <div class="shrink-0 w-10 h-10 rounded-full border-2 border-[var(--color-pink)] flex items-center justify-center font-terminal text-sm text-[var(--color-pink)]">03</div>
+            <div>
+              <p class="font-terminal text-[var(--color-pink)] mb-1">TRANSFORM: dbt Core</p>
+              <p class="font-body text-sm text-[var(--color-white)]/70">
+                14 dbt models across 3 layers: staging (views), star schema (tables), snowflake schema (tables).
+                143 tests covering not_null, unique, relationships, and accepted_values constraints.
+                Surrogate keys via dbt_utils.generate_surrogate_key.
+              </p>
+            </div>
+          </div>
+
+          <div class="ml-5 border-l-2 border-[var(--color-border)] h-4"></div>
+
+          <!-- Stage 4 -->
+          <div class="flex gap-4">
+            <div class="shrink-0 w-10 h-10 rounded-full border-2 border-[var(--color-amber)] flex items-center justify-center font-terminal text-sm text-[var(--color-amber)]">04</div>
+            <div>
+              <p class="font-terminal text-[var(--color-amber)] mb-1">VISUALIZE: Metabase + Streamlit</p>
+              <p class="font-body text-sm text-[var(--color-white)]/70">
+                Self-hosted Metabase for executive dashboards with embedded iframes.
+                Self-hosted Streamlit for the interactive Token Forecaster application.
+                Both run as Docker containers with health checks.
+              </p>
+            </div>
+          </div>
+        </div>
+      </RetroWindow>
+
+      <!-- Infrastructure -->
+      <RetroWindow title="INFRASTRUCTURE: DOCKER COMPOSE">
+        <div class="grid sm:grid-cols-2 gap-3 font-terminal text-xs">
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)]">traefik</p>
+            <p class="text-[var(--color-white)]/50">Reverse proxy | TLS termination</p>
+            <p class="text-[var(--color-white)]/40">Only entry point (ports 80/443)</p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)]">portfolio_db</p>
+            <p class="text-[var(--color-white)]/50">PostgreSQL | internal network</p>
+            <p class="text-[var(--color-white)]/40">Primary analytical database</p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)]">metabase</p>
+            <p class="text-[var(--color-white)]/50">Metabase OSS | public dashboard only</p>
+            <p class="text-[var(--color-white)]/40">Executive dashboards & BI</p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)]">streamlit</p>
+            <p class="text-[var(--color-white)]/50">Streamlit | internal network</p>
+            <p class="text-[var(--color-white)]/40">Token Forecaster application</p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)]">frontend</p>
+            <p class="text-[var(--color-white)]/50">Nginx (static) | Astro build</p>
+            <p class="text-[var(--color-white)]/40">Portfolio site (static HTML/CSS/JS)</p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)]">sonarqube</p>
+            <p class="text-[var(--color-white)]/50">SonarQube CE | dev-only</p>
+            <p class="text-[var(--color-white)]/40">Static analysis & quality gates</p>
+          </div>
+        </div>
+      </RetroWindow>
+
+      <!-- Sample code -->
+      <CodePanel
+        title="docker-compose.yml (excerpt)"
+        language="yaml"
+        code={`services:
+  traefik:
+    image: traefik:v3.4
+    ports: ["80:80", "443:443"]  # Only exposed ports
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+
+  portfolio_db:
+    image: postgres:16
+    networks: [internal]         # No host port; internal only
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $PORTFOLIO_DB_USER"]
+
+  metabase:
+    labels:
+      # Only /public/ paths routed; admin blocked
+      - "traefik.http.routers.metabase-public.rule=PathPrefix('/metabase/public')"
+    networks: [internal, web]
+
+  streamlit:
+    labels:
+      - "traefik.http.routers.streamlit.rule=PathPrefix('/forecaster')"
+    networks: [internal, web]`}
+      />
+
+      <!-- dbt Lineage DAG -->
+      <MermaidDiagram
+        title="dbt MODEL LINEAGE: 14 MODELS ACROSS 3 LAYERS"
+        chart={lineageDAG}
+      />
+
+      <!-- Data Generation Methodology -->
+      <RetroWindow title="DATA GENERATION: STATISTICAL DISTRIBUTIONS" class="animate-border-pulse">
+        <div class="font-body text-sm text-[var(--color-white)]/80 leading-relaxed space-y-3 mb-6">
+          <p>
+            The synthetic dataset is not random noise: each column uses a
+            <strong class="text-[var(--color-cyan)]">domain-appropriate statistical distribution</strong>
+            that mirrors real-world LLM API telemetry patterns. This matters because realistic data
+            exposes real query planner behaviors and index selectivity.
+          </p>
+        </div>
+
+        <div class="grid sm:grid-cols-2 gap-3 font-terminal text-xs">
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)] mb-1">LATENCY: Log-Normal</p>
+            <p class="text-[var(--color-white)]/50 mb-1">μ=6.5, σ=0.8 → median ~660ms, p99 ~5,000ms</p>
+            <p class="text-[var(--color-white)]/40">
+              Why: API latencies cluster around a median but exhibit heavy right tails from
+              cold starts, queue contention, and large context windows. Log-normal captures this
+              naturally: multiplicative noise on a base latency.
+            </p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)] mb-1">TOKEN COUNTS: Pareto</p>
+            <p class="text-[var(--color-white)]/50 mb-1">α=1.5, scale=50 → most requests small, heavy tail to 100K</p>
+            <p class="text-[var(--color-white)]/40">
+              Why: Token usage follows a power law; most calls use short prompts,
+              but a small fraction of enterprise users send massive context windows.
+              Pareto distribution models this 80/20 pattern.
+            </p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)] mb-1">TRAFFIC PATTERN: Sinusoidal</p>
+            <p class="text-[var(--color-white)]/50 mb-1">Diurnal peak ~12:30, overnight -85%, weekend -40%</p>
+            <p class="text-[var(--color-white)]/40">
+              Why: API traffic follows business hours. Rejection sampling with
+              sin(2π(h-6.5)/24) modulation creates realistic day/night cycles.
+              Weekend dampening and overnight suppression (2am-5am) added separately.
+            </p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)] mb-1">HTTP STATUS: Weighted Categorical</p>
+            <p class="text-[var(--color-white)]/50 mb-1">200: 94%, 429: 3%, 500: 2%, 401: 1%</p>
+            <p class="text-[var(--color-white)]/40">
+              Why: Production APIs are dominated by successes. Rate limiting (429)
+              is the most common error, followed by server errors and auth failures.
+              Weighted random choice with fixed probabilities.
+            </p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)] mb-1">SAFETY FLAGS: Bernoulli</p>
+            <p class="text-[var(--color-white)]/50 mb-1">p=0.008 → ~0.8% of requests flagged</p>
+            <p class="text-[var(--color-white)]/40">
+              Why: Content safety triggers are rare binary events with a fixed probability
+              per request, a textbook Bernoulli trial.
+            </p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)] mb-1">USER REQUEST VOLUME: Power Law</p>
+            <p class="text-[var(--color-white)]/50 mb-1">Enterprise: 20× weight, Free: 1× weight</p>
+            <p class="text-[var(--color-white)]/40">
+              Why: A small fraction of enterprise users generate the majority of traffic.
+              Tier-based weighting (Free:1, Starter:3, Pro:8, Enterprise:20) creates
+              the expected skew in per-user request counts.
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-4 p-3 rounded border border-[var(--color-amber)]/30 bg-[var(--color-amber)]/5">
+          <p class="font-terminal text-xs text-[var(--color-amber)] mb-1">REPRODUCIBILITY</p>
+          <p class="font-terminal text-xs text-[var(--color-white)]/50">
+            All distributions seeded with numpy.random.default_rng(42). Faker seeded separately.
+            Identical output on any platform: <code class="text-[var(--color-cyan)]">python generate_data.py --seed 42 --rows 500000</code>
+          </p>
+        </div>
+      </RetroWindow>
+
+      <!-- Technology choices -->
+      <RetroWindow title="TECHNOLOGY SOVEREIGNTY">
+        <div class="font-body text-sm text-[var(--color-white)]/80 leading-relaxed space-y-3">
+          <p>
+            Every component is <strong class="text-[var(--color-green)]">self-hosted and open-source</strong>.
+            No runtime dependency on big-tech hosted services. All services are deployable on
+            infrastructure you control via Docker Compose.
+          </p>
+          <p>
+            Fonts are self-hosted (no Google CDN). Analytics via Metabase OSS (no Google Analytics).
+            Interactive apps via self-hosted Streamlit (not Streamlit Community Cloud).
+          </p>
+        </div>
+      </RetroWindow>
+    </div>
+  </section>
+</BaseLayout>

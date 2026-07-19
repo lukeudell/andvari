@@ -1,0 +1,116 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import RetroWindow from '../../../components/RetroWindow.astro';
+
+// In production, Streamlit is proxied through Traefik at /forecaster/
+// In dev, use localhost:8501 directly
+const isProd = import.meta.env.PROD;
+const streamlitUrl = isProd ? '/forecaster/' : 'http://localhost:8501';
+const streamlitEmbed = isProd ? '/forecaster/?embed=true' : 'http://localhost:8501/?embed=true';
+---
+
+<BaseLayout title="Token Forecaster" description="Interactive LLM token usage forecasting and cost modeling via self-hosted Streamlit.">
+  <section class="mx-auto max-w-7xl px-4 sm:px-6 py-12">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10">
+      <div>
+        <h1 class="font-heading text-2xl sm:text-4xl tracking-widest glow-cyan mb-2">
+          TOKEN FORECASTER
+        </h1>
+        <p class="font-terminal text-sm text-[var(--color-green)]">
+          &gt; SELF-HOSTED STREAMLIT // INTERACTIVE COST MODELING
+        </p>
+      </div>
+      <a
+        href={streamlitUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="shrink-0 inline-block font-terminal text-sm px-4 py-2 border border-[var(--color-cyan)] text-[var(--color-cyan)] rounded hover:bg-[var(--color-cyan)]/10 transition-colors"
+      >
+        [OPEN FULL SCREEN]
+      </a>
+    </div>
+
+    <!-- Desktop: embedded iframe, full width, no RetroWindow wrapper to maximize space -->
+    <div class="hidden md:block border border-[var(--color-border)] rounded-md overflow-hidden bg-[var(--color-surface)]">
+      <div class="flex items-center gap-2 px-4 py-2 border-b border-[var(--color-border)] bg-[var(--color-bg)]">
+        <span class="flex gap-1.5">
+          <span class="w-3 h-3 rounded-full bg-[var(--color-pink)]"></span>
+          <span class="w-3 h-3 rounded-full bg-[var(--color-amber)]"></span>
+          <span class="w-3 h-3 rounded-full bg-[var(--color-green)]"></span>
+        </span>
+        <span class="font-terminal text-xs text-[var(--color-white)]/60 tracking-wider">STREAMLIT: TOKEN FORECASTER</span>
+      </div>
+      <iframe
+        id="streamlit-embed"
+        data-embed-base={streamlitEmbed}
+        class="w-full rounded-b"
+        style="height: 900px;"
+        title="Token Forecaster Application"
+        loading="lazy"
+        sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+      ></iframe>
+    </div>
+
+    <!-- Mobile: link out -->
+    <div class="md:hidden">
+      <RetroWindow title="STREAMLIT: TOKEN FORECASTER">
+        <div class="text-center py-8">
+          <p class="font-body text-sm text-[var(--color-white)]/70 mb-5 leading-relaxed">
+            This interactive app needs a wider screen to be useful. Tap below to open it in a new tab.
+          </p>
+          <a
+            href={streamlitUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-block font-terminal text-base font-bold px-6 py-3 border-2 border-[var(--color-cyan)] text-[var(--color-cyan)] bg-[var(--color-cyan)]/5 rounded hover:bg-[var(--color-cyan)]/15 transition-colors"
+          >
+            [OPEN FORECASTER IN NEW TAB]
+          </a>
+        </div>
+      </RetroWindow>
+    </div>
+
+    <!-- Features -->
+    <div class="mt-8 grid sm:grid-cols-2 gap-4">
+      <RetroWindow title="FEATURES">
+        <ul class="font-terminal text-sm space-y-2 text-[var(--color-white)]/80">
+          <li class="flex gap-2">
+            <span class="text-[var(--color-green)]">&gt;</span>
+            <span>4 scenario presets (Startup → Hyperscale)</span>
+          </li>
+          <li class="flex gap-2">
+            <span class="text-[var(--color-green)]">&gt;</span>
+            <span>Model mix sliders enforcing 100% allocation</span>
+          </li>
+          <li class="flex gap-2">
+            <span class="text-[var(--color-green)]">&gt;</span>
+            <span>12-month cost vs revenue projection</span>
+          </li>
+          <li class="flex gap-2">
+            <span class="text-[var(--color-green)]">&gt;</span>
+            <span>Gross margin analysis by model</span>
+          </li>
+          <li class="flex gap-2">
+            <span class="text-[var(--color-green)]">&gt;</span>
+            <span>Vaporwave-themed Plotly charts</span>
+          </li>
+        </ul>
+      </RetroWindow>
+
+      <RetroWindow title="INFRASTRUCTURE">
+        <div class="font-terminal text-sm space-y-2 text-[var(--color-white)]/80">
+          <p><span class="text-[var(--color-cyan)]">Runtime:</span> Streamlit (Python)</p>
+          <p><span class="text-[var(--color-cyan)]">Container:</span> Docker (slim image)</p>
+          <p><span class="text-[var(--color-cyan)]">Proxy:</span> Traefik with TLS</p>
+          <p><span class="text-[var(--color-cyan)]">Hosting:</span> Self-hosted (Hetzner)</p>
+          <p><span class="text-[var(--color-cyan)]">Charts:</span> Plotly with custom theme</p>
+        </div>
+      </RetroWindow>
+    </div>
+  </section>
+
+  <script>
+    import { initStreamlitEmbed } from '../../../lib/streamlit-embed-init';
+    initStreamlitEmbed(document.getElementById('streamlit-embed') as HTMLIFrameElement | null);
+  </script>
+</BaseLayout>

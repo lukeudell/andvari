@@ -1,0 +1,425 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import RetroWindow from '../../../components/RetroWindow.astro';
+import CodePanel from '../../../components/CodePanel.astro';
+import MermaidDiagram from '../../../components/MermaidDiagram.astro';
+
+const starERD = `erDiagram
+    fct_api_requests ||--o{ dim_users : "user_key"
+    fct_api_requests ||--o{ dim_models : "model_key"
+    fct_api_requests ||--o{ dim_date : "date_key"
+    fct_api_requests ||--o{ dim_endpoints : "endpoint_key"
+
+    fct_api_requests {
+        string request_id PK
+        string user_key FK
+        string model_key FK
+        int date_key FK
+        string endpoint_key FK
+        numeric latency_ms
+        int tokens_input
+        int tokens_output
+        int tokens_total
+        numeric cost_usd
+        int http_status
+        boolean safety_flag
+        timestamp request_timestamp
+    }
+
+    dim_users {
+        string user_key PK
+        string user_id UK
+        string billing_tier
+        string company_name
+        string industry
+        date signup_date
+        string region
+    }
+
+    dim_models {
+        string model_key PK
+        string model_id UK
+        string model_family
+        numeric cost_per_input_token
+        numeric cost_per_output_token
+        int context_window_k
+        boolean is_active
+    }
+
+    dim_date {
+        int date_key PK
+        date full_date
+        string day_of_week
+        boolean is_weekend
+        int week_of_year
+        string month_name
+        string quarter
+        int year
+    }
+
+    dim_endpoints {
+        string endpoint_key PK
+        string endpoint_path UK
+        string api_version
+        boolean is_deprecated
+    }`;
+
+const snowflakeERD = `erDiagram
+    fct_api_requests_sf ||--o{ dim_users_sf : "user_key"
+    fct_api_requests_sf ||--o{ dim_models : "model_key"
+    fct_api_requests_sf ||--o{ dim_date : "date_key"
+    fct_api_requests_sf ||--o{ dim_endpoints : "endpoint_key"
+    dim_users_sf ||--o{ dim_companies : "company_key"
+    dim_users_sf ||--o{ dim_billing_tiers : "billing_tier_key"
+
+    fct_api_requests_sf {
+        string request_id PK
+        string user_key FK
+        string model_key FK
+        int date_key FK
+        string endpoint_key FK
+        numeric latency_ms
+        int tokens_input
+        int tokens_output
+        int tokens_total
+        numeric cost_usd
+        int http_status
+        boolean safety_flag
+        timestamp request_timestamp
+    }
+
+    dim_users_sf {
+        string user_key PK
+        string user_id UK
+        string company_key FK
+        string billing_tier_key FK
+        date signup_date
+        string region
+    }
+
+    dim_companies {
+        string company_key PK
+        string company_name UK
+        string industry
+        string company_size_band
+        string hq_country
+    }
+
+    dim_billing_tiers {
+        string billing_tier_key PK
+        string tier_name UK
+        numeric monthly_price_usd
+        int rate_limit_rpm
+        boolean has_priority_access
+    }
+
+    dim_models {
+        string model_key PK
+        string model_id UK
+        string model_family
+        numeric cost_per_input_token
+        numeric cost_per_output_token
+        int context_window_k
+        boolean is_active
+    }
+
+    dim_date {
+        int date_key PK
+        date full_date
+        string day_of_week
+        boolean is_weekend
+        int week_of_year
+        string month_name
+        string quarter
+        int year
+    }
+
+    dim_endpoints {
+        string endpoint_key PK
+        string endpoint_path UK
+        string api_version
+        boolean is_deprecated
+    }`;
+---
+
+<BaseLayout title="Data Models" description="Star and Snowflake schema design: Kimball dimensional modeling for LLM API telemetry.">
+  <section class="mx-auto max-w-5xl px-4 sm:px-6 py-12">
+    <h1 class="font-heading text-2xl sm:text-4xl tracking-widest glow-cyan mb-2">
+      DATA MODELS
+    </h1>
+    <p class="font-terminal text-sm text-[var(--color-green)] mb-10">
+      &gt; KIMBALL DIMENSIONAL MODELING // STAR & SNOWFLAKE SCHEMAS
+    </p>
+
+    <div class="space-y-8 stagger-children">
+      <!-- Overview -->
+      <RetroWindow title="MODELING APPROACH">
+        <div class="font-body text-sm text-[var(--color-white)]/80 leading-relaxed space-y-3">
+          <p>
+            This project implements <strong class="text-[var(--color-cyan)]">two parallel schema designs</strong> over
+            the same source data, demonstrating both the standard Kimball star schema and its normalized
+            snowflake variant side-by-side.
+          </p>
+          <p>
+            The source data simulates 500K LLM API requests across 5,000 users, 5 models, and 5 endpoints
+            over a 91-day window. Statistical distributions mirror real-world telemetry: log-normal latency,
+            Pareto token counts, sinusoidal diurnal traffic patterns.
+          </p>
+        </div>
+      </RetroWindow>
+
+      <!-- Star Schema -->
+      <RetroWindow title="STAR SCHEMA" class="animate-border-pulse">
+        <p class="font-terminal text-xs text-[var(--color-amber)] mb-4">
+          SCHEMA: public_star | MODELS: 5 (1 fact + 4 dimensions)
+        </p>
+        <div class="font-body text-sm text-[var(--color-white)]/80 leading-relaxed space-y-3 mb-6">
+          <p>
+            The <strong class="text-[var(--color-cyan)]">star schema</strong> is the default choice for analytical workloads.
+            One central fact table surrounded by denormalized dimension tables: fewer joins, faster queries.
+          </p>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-4 font-terminal text-xs">
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-pink)] mb-2">fct_api_requests</p>
+            <p class="text-[var(--color-white)]/50">Grain: one row per API request</p>
+            <p class="text-[var(--color-white)]/50">500K rows | Surrogate FK to all dims</p>
+            <p class="text-[var(--color-white)]/50">Measures: latency_ms, tokens_*, cost_usd</p>
+          </div>
+          <div class="space-y-2">
+            <div class="p-2 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+              <span class="text-[var(--color-cyan)]">dim_users</span>
+              <span class="text-[var(--color-white)]/40">: 5K rows, denormalized</span>
+            </div>
+            <div class="p-2 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+              <span class="text-[var(--color-cyan)]">dim_models</span>
+              <span class="text-[var(--color-white)]/40">: 5 rows, LLM model metadata</span>
+            </div>
+            <div class="p-2 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+              <span class="text-[var(--color-cyan)]">dim_date</span>
+              <span class="text-[var(--color-white)]/40">: 91 rows, calendar dimension</span>
+            </div>
+            <div class="p-2 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+              <span class="text-[var(--color-cyan)]">dim_endpoints</span>
+              <span class="text-[var(--color-white)]/40">: 5 rows, API endpoint metadata</span>
+            </div>
+          </div>
+        </div>
+      </RetroWindow>
+
+      <!-- Snowflake Schema -->
+      <RetroWindow title="SNOWFLAKE SCHEMA">
+        <p class="font-terminal text-xs text-[var(--color-amber)] mb-4">
+          SCHEMA: public_snowflake | MODELS: 7 (1 fact + 6 dimensions)
+        </p>
+        <div class="font-body text-sm text-[var(--color-white)]/80 leading-relaxed space-y-3 mb-6">
+          <p>
+            The <strong class="text-[var(--color-cyan)]">snowflake schema</strong> normalizes the user dimension
+            into separate company and billing tier tables. This reduces redundancy at the cost of additional
+            joins, justified when dimension tables are large or frequently updated.
+          </p>
+        </div>
+        <div class="grid sm:grid-cols-3 gap-4 font-terminal text-xs">
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-pink)] mb-1">fct_api_requests_sf</p>
+            <p class="text-[var(--color-white)]/50">Same grain, refs normalized dims</p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)] mb-1">dim_users_sf</p>
+            <p class="text-[var(--color-white)]/50">FK → dim_companies, dim_billing_tiers</p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)] mb-1">dim_companies</p>
+            <p class="text-[var(--color-white)]/50">Extracted from users via mode()</p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)] mb-1">dim_billing_tiers</p>
+            <p class="text-[var(--color-white)]/50">Hardcoded reference: Free/Starter/Pro/Enterprise</p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)] mb-1">dim_models</p>
+            <p class="text-[var(--color-white)]/50">Shared with star schema</p>
+          </div>
+          <div class="p-3 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <p class="text-[var(--color-cyan)] mb-1">dim_date / dim_endpoints</p>
+            <p class="text-[var(--color-white)]/50">Shared with star schema</p>
+          </div>
+        </div>
+      </RetroWindow>
+
+      <!-- ERD: Star Schema -->
+      <MermaidDiagram
+        title="ERD: STAR SCHEMA"
+        chart={starERD}
+      />
+
+      <!-- ERD: Snowflake Schema -->
+      <MermaidDiagram
+        title="ERD: SNOWFLAKE SCHEMA"
+        chart={snowflakeERD}
+      />
+
+      <!-- Sample SQL -->
+      <CodePanel
+        title="dbt: dim_companies.sql"
+        language="sql"
+        code={`with users as (
+    select * from {{ ref('stg_users') }}
+),
+
+companies as (
+    select
+        company_name,
+        -- Pick the most common industry per company to avoid fan-out
+        mode() within group (order by industry) as industry
+    from users
+    group by company_name
+)
+
+select
+    {{ dbt_utils.generate_surrogate_key(['company_name']) }} as company_key,
+    company_name,
+    industry,
+    case
+        when length(company_name) < 15 then 'Small'
+        when length(company_name) < 25 then 'Medium'
+        else 'Large'
+    end as company_size_band,
+    'US' as hq_country
+from companies`}
+      />
+
+      <!-- Test coverage -->
+      <RetroWindow title="TEST COVERAGE">
+        <div class="font-terminal text-sm space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-[var(--color-white)]/60">Total dbt tests</span>
+            <span class="text-[var(--color-green)] glow-green">143 PASS</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-[var(--color-white)]/60">Test types</span>
+            <span class="text-[var(--color-white)]/80">not_null, unique, relationships, accepted_values</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-[var(--color-white)]/60">Schemas tested</span>
+            <span class="text-[var(--color-white)]/80">staging, star, snowflake</span>
+          </div>
+        </div>
+      </RetroWindow>
+
+      <!-- EXPLAIN ANALYZE: Query Performance -->
+      <RetroWindow title="QUERY PERFORMANCE: EXPLAIN ANALYZE" class="animate-border-pulse">
+        <div class="font-body text-sm text-[var(--color-white)]/80 leading-relaxed space-y-3 mb-6">
+          <p>
+            The schema tradeoff is measurable. Below are real <code class="font-terminal text-[var(--color-cyan)]">EXPLAIN ANALYZE</code>
+            results comparing the <strong class="text-[var(--color-green)]">star schema</strong> (denormalized) against the
+            <strong class="text-[var(--color-pink)]">snowflake schema</strong> (normalized) for the same business question:
+            <em>"Total cost by industry."</em>
+          </p>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Query 1: Star, cost by model (baseline) -->
+          <div class="p-4 rounded bg-[var(--color-bg)] border border-[var(--color-border)]">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <span class="font-terminal text-xs text-[var(--color-cyan)]">STAR: Cost by Model (1 join)</span>
+              <span class="font-terminal text-xs text-[var(--color-green)]">197ms</span>
+            </div>
+            <pre class="font-terminal text-xs text-[var(--color-white)]/60 overflow-x-auto whitespace-pre leading-relaxed"><code>HashAggregate  (rows=5)
+  └─ Hash Join  (cost=0.16..19544)     ← O(1) hash probe per row
+       └─ Gather Merge
+            └─ Parallel Seq Scan       ← O(n) scan, n=500K
+                 on fct_api_requests     Workers: 2</code></pre>
+            <div class="mt-2 font-terminal text-xs">
+              <span class="text-[var(--color-amber)]">Complexity:</span>
+              <span class="text-[var(--color-white)]/60">O(n) sequential scan + O(1) hash probe × n rows.</span>
+              <span class="text-[var(--color-white)]/60">Parallelized across 2 workers → effective O(n/p).</span>
+            </div>
+          </div>
+
+          <!-- Query 2: Snowflake, cost by industry (3 joins) -->
+          <div class="p-4 rounded bg-[var(--color-bg)] border border-[var(--color-pink)]/40">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <span class="font-terminal text-xs text-[var(--color-pink)]">SNOWFLAKE: Cost by Industry (3 joins)</span>
+              <span class="font-terminal text-xs text-[var(--color-pink)]">206ms</span>
+            </div>
+            <pre class="font-terminal text-xs text-[var(--color-white)]/60 overflow-x-auto whitespace-pre leading-relaxed"><code>HashAggregate  (rows=10)
+  └─ Hash Join  (cost=427..25411)      ← join #3: users → companies
+       └─ Hash Join                    ← join #2: fact → users
+            └─ Hash Join               ← join #1: fact scan
+                 └─ Seq Scan             on fct_api_requests_sf
+                      (rows=500K)        O(n) full scan, no parallelism</code></pre>
+            <div class="mt-2 font-terminal text-xs">
+              <span class="text-[var(--color-amber)]">Complexity:</span>
+              <span class="text-[var(--color-white)]/60">O(n) scan + O(k) hash build (users) + O(m) hash build (companies).</span>
+              <span class="text-[var(--color-white)]/60">3 hash tables in memory. No parallelism available.</span>
+            </div>
+          </div>
+
+          <!-- Query 3: Star, cost by industry (1 join, denormalized) -->
+          <div class="p-4 rounded bg-[var(--color-bg)] border border-[var(--color-green)]/40">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <span class="font-terminal text-xs text-[var(--color-green)]">STAR: Cost by Industry (1 join, denormalized)</span>
+              <span class="font-terminal text-xs text-[var(--color-green)]">51ms ← 4× faster</span>
+            </div>
+            <pre class="font-terminal text-xs text-[var(--color-white)]/60 overflow-x-auto whitespace-pre leading-relaxed"><code>HashAggregate  (rows=10)
+  └─ Hash Join  (cost=233..19760)      ← single join: fact → dim_users
+       └─ Gather Merge
+            └─ Parallel Seq Scan       ← O(n) scan, n=500K
+                 on fct_api_requests     Workers: 2, parallelized</code></pre>
+            <div class="mt-2 font-terminal text-xs">
+              <span class="text-[var(--color-amber)]">Complexity:</span>
+              <span class="text-[var(--color-white)]/60">O(n) scan + single O(1) hash probe.</span>
+              <span class="text-[var(--color-white)]/60">Industry denormalized into dim_users: no chained joins.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Takeaway -->
+        <div class="mt-6 p-4 rounded border border-[var(--color-amber)]/30 bg-[var(--color-amber)]/5">
+          <p class="font-terminal text-xs text-[var(--color-amber)] mb-2">TAKEAWAY</p>
+          <div class="font-body text-sm text-[var(--color-white)]/80 leading-relaxed space-y-2">
+            <p>
+              Same business question, <em>"total cost by industry"</em>, answered in <strong class="text-[var(--color-green)]">51ms</strong>
+              (star, 1 join) vs <strong class="text-[var(--color-pink)]">206ms</strong> (snowflake, 3 joins).
+              The denormalized star schema is <strong class="text-[var(--color-green)]">4× faster</strong> because:
+            </p>
+            <ul class="font-terminal text-xs space-y-1 ml-4">
+              <li class="flex gap-2">
+                <span class="text-[var(--color-green)]">+</span>
+                <span>Fewer hash table builds (1 vs 3), reducing memory pressure</span>
+              </li>
+              <li class="flex gap-2">
+                <span class="text-[var(--color-green)]">+</span>
+                <span>Parallel seq scan enabled: O(n/p) vs O(n)</span>
+              </li>
+              <li class="flex gap-2">
+                <span class="text-[var(--color-green)]">+</span>
+                <span>No join cascading: each additional join adds O(k) hash build overhead</span>
+              </li>
+            </ul>
+            <p class="text-xs text-[var(--color-white)]/50 mt-2">
+              This is the Kimball tradeoff: storage redundancy buys query speed. The snowflake schema
+              earns its cost when dimension tables are large, frequently updated, or when write-path
+              consistency matters more than read performance.
+            </p>
+          </div>
+        </div>
+      </RetroWindow>
+
+      <!-- dbt Docs link -->
+      <RetroWindow title="GENERATED DOCUMENTATION">
+        <p class="font-body text-sm text-[var(--color-white)]/80 mb-4">
+          Full dbt-generated documentation including lineage graph, column-level descriptions,
+          and test results.
+        </p>
+        <a
+          href="/dbt-docs/index.html" target="_blank" rel="noopener noreferrer"
+          class="inline-block font-terminal text-sm px-4 py-2 border border-[var(--color-cyan)] text-[var(--color-cyan)] rounded hover:bg-[var(--color-cyan)]/10 transition-colors"
+        >
+          [OPEN DBT DOCS]
+        </a>
+      </RetroWindow>
+    </div>
+  </section>
+</BaseLayout>
