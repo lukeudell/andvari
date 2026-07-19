@@ -1,0 +1,29 @@
+name: 'andvari'
+version: '0.1.0'
+config-version: 2
+
+profile: 'andvari'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  andvari:
+    staging:
+      +materialized: view
+      +schema: staging
+    marts:
+      star:
+        +materialized: table
+        +schema: star
+      snowflake:
+        +materialized: table
+        +schema: snowflake

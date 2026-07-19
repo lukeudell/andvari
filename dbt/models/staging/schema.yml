@@ -1,0 +1,189 @@
+version: 2
+
+sources:
+  - name: raw_staging
+    schema: raw_staging
+    description: "Raw staging tables loaded from generated CSV data"
+    tables:
+      - name: api_requests
+        description: "Raw API request telemetry events"
+      - name: users
+        description: "Raw user account records"
+      - name: models
+        description: "Raw LLM model catalog"
+      - name: endpoints
+        description: "Raw API endpoint catalog"
+      - name: dates
+        description: "Raw date dimension seed data"
+
+models:
+  - name: stg_api_requests
+    description: "Staged API request telemetry. One row per API call."
+    columns:
+      - name: request_id
+        description: "Unique identifier for each API request"
+        tests:
+          - not_null
+          - unique
+      - name: user_id
+        description: "Foreign key to stg_users"
+        tests:
+          - not_null
+      - name: model_id
+        description: "Foreign key to stg_models"
+        tests:
+          - not_null
+      - name: endpoint_path
+        description: "Foreign key to stg_endpoints"
+        tests:
+          - not_null
+      - name: request_timestamp
+        description: "UTC timestamp when the API request was received"
+        tests:
+          - not_null
+      - name: latency_ms
+        description: "Server-side latency in milliseconds (log-normal distribution)"
+        tests:
+          - not_null
+      - name: tokens_input
+        description: "Number of input tokens in the request (Pareto distribution)"
+        tests:
+          - not_null
+      - name: tokens_output
+        description: "Number of output tokens generated (correlated with input)"
+        tests:
+          - not_null
+      - name: tokens_total
+        description: "Sum of tokens_input and tokens_output"
+        tests:
+          - not_null
+      - name: cost_usd
+        description: "Computed cost in USD based on model pricing and token counts"
+        tests:
+          - not_null
+      - name: http_status
+        description: "HTTP response status code"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [200, 401, 429, 500]
+      - name: safety_flag
+        description: "Whether the request triggered a safety classifier (Bernoulli p=0.008)"
+        tests:
+          - not_null
+
+  - name: stg_users
+    description: "Staged user accounts. One row per registered API user."
+    columns:
+      - name: user_id
+        description: "Unique user identifier"
+        tests:
+          - not_null
+          - unique
+      - name: billing_tier
+        description: "User subscription tier"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["Free", "Starter", "Pro", "Enterprise"]
+      - name: company_name
+        description: "Name of the user's organization"
+        tests:
+          - not_null
+      - name: industry
+        description: "Industry vertical of the user's organization"
+        tests:
+          - not_null
+      - name: signup_date
+        description: "Date the user account was created"
+        tests:
+          - not_null
+      - name: region
+        description: "Geographic region of the user"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["us-east", "us-west", "eu-west", "eu-central", "ap-southeast", "ap-northeast"]
+
+  - name: stg_models
+    description: "Staged LLM model catalog. One row per model variant."
+    columns:
+      - name: model_id
+        description: "Unique model identifier (e.g., claude-3-opus)"
+        tests:
+          - not_null
+          - unique
+      - name: model_family
+        description: "Model family grouping (e.g., claude-3)"
+        tests:
+          - not_null
+      - name: cost_per_input_token
+        description: "USD cost per input token"
+        tests:
+          - not_null
+      - name: cost_per_output_token
+        description: "USD cost per output token"
+        tests:
+          - not_null
+      - name: context_window_k
+        description: "Maximum context window size in thousands of tokens"
+        tests:
+          - not_null
+      - name: is_active
+        description: "Whether the model is currently available for new requests"
+        tests:
+          - not_null
+
+  - name: stg_endpoints
+    description: "Staged API endpoint catalog. One row per endpoint path."
+    columns:
+      - name: endpoint_path
+        description: "URL path of the API endpoint"
+        tests:
+          - not_null
+          - unique
+      - name: api_version
+        description: "API version string (e.g., v1, v2)"
+        tests:
+          - not_null
+      - name: is_deprecated
+        description: "Whether the endpoint is deprecated"
+        tests:
+          - not_null
+
+  - name: stg_dates
+    description: "Staged date dimension. One row per calendar day in the data window."
+    columns:
+      - name: date_key
+        description: "Integer surrogate key in YYYYMMDD format"
+        tests:
+          - not_null
+          - unique
+      - name: full_date
+        description: "Calendar date"
+        tests:
+          - not_null
+      - name: day_of_week
+        description: "Day name (e.g., Monday)"
+        tests:
+          - not_null
+      - name: is_weekend
+        description: "True if Saturday or Sunday"
+        tests:
+          - not_null
+      - name: week_of_year
+        description: "ISO week number"
+        tests:
+          - not_null
+      - name: month_name
+        description: "Full month name (e.g., January)"
+        tests:
+          - not_null
+      - name: quarter
+        description: "Fiscal quarter label (e.g., Q1)"
+        tests:
+          - not_null
+      - name: year
+        description: "Four-digit year"
+        tests:
+          - not_null
