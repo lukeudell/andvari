@@ -130,6 +130,13 @@ parallelism), star cost-by-industry 51ms — 4× faster because industry is
 denormalised into `dim_users`. That is the Kimball trade-off demonstrated rather
 than asserted.
 
+*(Update 2026-07-19: re-measured with the new reproducible benchmark
+(`data/benchmark_star_vs_snowflake.py`) on the dev workstation, the 4× gap does
+not reproduce — Postgres 16 parallelises all three plans and the star wins by
+only a few percent at this scale. The published narrative was rewritten to
+present both measurements and the environment-dependence as the point. Claims
+must survive being rerun.)*
+
 **The `dim_companies` fan-out bug.** `SELECT DISTINCT company_name, industry`
 returned 6,457 rows instead of ~4,900 because the generator assigned multiple
 industries to the same company name, silently inflating the fact table from 500K to

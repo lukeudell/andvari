@@ -51,16 +51,28 @@ Building both is what makes the trade-off measurable instead of theoretical.
 
 ## Query performance: EXPLAIN ANALYZE
 
-Asking one business question — total cost by industry — against both schemas:
+Asking one business question — total cost by industry — against both schemas.
+The measurement is a script, `data/benchmark_star_vs_snowflake.py`, so anyone
+can rerun it; these are medians of five warm runs on a dev workstation
+(Postgres 16 in Docker):
 
-| Query | Schema | Joins | Time | Plan |
-|---|---|---|---|---|
-| Cost by model | star | 1 | 197 ms | Parallel seq scan, 2 workers |
-| Cost by industry | snowflake | 3 | 206 ms | 3 hash builds, no parallelism |
-| Cost by industry | star | 1 | **51 ms** | Denormalised, 4× faster |
+| Query | Schema | Joins | Median |
+|---|---|---|---|
+| Cost by model | star | 1 | 51 ms |
+| Cost by industry | star | 1 | **53 ms** |
+| Cost by industry | snowflake | 3 | 56 ms |
 
-This is the Kimball trade-off: storage redundancy buys query speed. The snowflake
-schema earns its cost when dimension tables are large, frequently updated, or when
+The same queries measured in the source monorepo told a starker story: 51 ms
+vs 206 ms, a 4× gap, because that planner ran the snowflake's three hash joins
+without parallelism. On a host where every plan parallelises, the gap narrows
+to a few percent at 500K rows.
+
+Getting two different answers from two environments is not a weakness of the
+comparison — it is the comparison's whole argument. The denormalisation
+trade-off is real but environment-dependent: storage redundancy buys join
+elimination, and what that is worth depends on the planner, the cache, and the
+scale in front of you. Measure it where you run it. The snowflake schema earns
+its cost when dimension tables are large, frequently updated, or when
 write-path consistency matters more than read performance.
 
 ## A bug the tests caught

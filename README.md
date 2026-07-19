@@ -13,10 +13,13 @@ Extracted from the `command_center` monorepo on 2026-07-19 and now self-containe
 ## Run it
 
 ```bash
-cp .env.example .env               # set DB_PASSWORD and READER_DB_PASSWORD
-docker compose up -d db            # Postgres 16, bound to 127.0.0.1
-docker compose --profile seed up   # generate 500K rows, load, dbt build
-docker compose up -d app           # http://localhost:8501
+cp .env.example .env                        # set DB_PASSWORD and READER_DB_PASSWORD
+docker compose up -d db                     # Postgres 16, bound to 127.0.0.1:55432
+docker compose --profile seed run --rm seed # generate 500K rows and load them
+docker compose --profile seed run --rm dbt  # build 14 models, run 145 data tests
+docker compose up -d app                    # http://localhost:8501
+
+python -m pytest app/tests data/tests -q    # 158 Python tests, no database needed
 ```
 
 ## What's inside
@@ -28,6 +31,20 @@ docker compose up -d app           # http://localhost:8501
 | `data/` | Generator (fixed seed 42) and loader (Python 3.12) |
 | `docs/` | `CASE_STUDY.md` plus the original site pages, kept verbatim |
 | `project.yaml` | How this appears on lukeudell.com|
+
+## Lineage
+
+```mermaid
+flowchart LR
+    G[generate_data.py<br/>seed 42] -->|CSV| R[(raw_staging)]
+    C[model_catalog.csv<br/>pricing source of truth] --> G
+    R --> S[5 staging views]
+    S --> ST[star mart<br/>fct + 4 dims]
+    S --> SF[snowflake mart<br/>fct_sf → companies, tiers]
+    ST --> A[Streamlit forecaster<br/>telemetry-calibrated]
+    C --> A
+    ST -.EXPLAIN ANALYZE.- SF
+```
 
 ## The dataset
 
@@ -45,17 +62,31 @@ and index selectivity. Uniform random data makes every plan look the same.
 
 ## The comparison worth reading
 
-Both marts are built over the same source so the same question can be asked twice:
+Both marts are built over the same source so the same question can be asked
+twice — and remeasured on any machine, because the number is a command, not a
+claim:
 
-| Query | Schema | Joins | Time |
+```bash
+python data/benchmark_star_vs_snowflake.py
+```
+
+| Query | Schema | Joins | Median (ms)¹ |
 |---|---|---|---|
-| Cost by model | star | 1 | 197 ms |
-| Cost by industry | snowflake | 3 | 206 ms |
-| Cost by industry | star | 1 | **51 ms** |
+| Cost by model | star | 1 | 51 |
+| Cost by industry | star | 1 | **53** |
+| Cost by industry | snowflake | 3 | 56 |
 
-Storage redundancy buys query speed. The snowflake schema earns its cost when
-dimensions are large, frequently updated, or when write-path consistency matters
-more than read performance — which, here, it does not.
+¹ Median of 5 warm runs, Postgres 16 in Docker on a dev workstation.
+
+The same queries measured in the source monorepo showed 51 ms vs 206 ms — a 4×
+gap — because that planner ran the snowflake's three hash joins without
+parallelism. On a host where every plan parallelises, the gap narrows to a few
+percent at 500K rows. Both results are the same lesson, and the reason both
+schemas exist: the denormalisation trade-off is real but environment-dependent.
+Storage redundancy buys join elimination; what that's worth is a measurement,
+not a slogan. The snowflake earns its cost when dimensions are large,
+frequently updated, or when write-path consistency matters more than read
+performance — which, here, it does not.
 
 ## CI
 

@@ -66,25 +66,31 @@ sections:
       Building both is what makes the trade-off measurable rather than theoretical.
 
   - slug: performance
-    title: Why the Star Schema Wins Here
+    title: Measuring the Star-vs-Snowflake Trade-off
     published: true
     body: |
-      One business question -- total cost by industry -- asked against both schemas,
-      measured with EXPLAIN ANALYZE:
+      One business question -- total cost by industry -- asked against both
+      schemas with EXPLAIN ANALYZE. The measurement ships as a script
+      (`data/benchmark_star_vs_snowflake.py`), so the number is a command,
+      not a claim. Medians of five warm runs, Postgres 16:
 
-      | Query | Schema | Joins | Time |
+      | Query | Schema | Joins | Median |
       |---|---|---|---|
-      | Cost by model | star | 1 | 197 ms |
-      | Cost by industry | snowflake | 3 | 206 ms |
-      | Cost by industry | star | 1 | **51 ms** |
+      | Cost by model | star | 1 | 51 ms |
+      | Cost by industry | star | 1 | **53 ms** |
+      | Cost by industry | snowflake | 3 | 56 ms |
 
-      Four times faster, because industry is denormalised onto the user dimension
-      and the planner can parallelise a single join.
+      An earlier measurement of the same queries showed 51 ms vs 206 ms -- a 4x
+      gap -- because that planner ran the snowflake's three hash joins without
+      parallelism. On hardware where every plan parallelises, the gap narrows
+      to a few percent at 500K rows.
 
-      This is the Kimball trade-off stated precisely: storage redundancy buys query
-      speed. The snowflake schema earns its cost when dimension tables are large,
-      frequently updated, or when write-path consistency matters more than read
-      performance. Here, none of those hold.
+      Two environments, two answers, one lesson -- and it is the reason both
+      schemas exist: the denormalisation trade-off is real but
+      environment-dependent. Storage redundancy buys join elimination; what
+      that is worth is a measurement, not a slogan. The snowflake earns its
+      cost when dimensions are large, frequently updated, or when write-path
+      consistency matters more than read performance. Here, none of those hold.
 
   - slug: quality
     title: A Bug the Tests Caught

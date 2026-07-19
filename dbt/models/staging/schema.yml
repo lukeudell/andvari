@@ -1,5 +1,10 @@
 version: 2
 
+# Source freshness is deliberately not configured. The source is a seeded
+# synthetic snapshot (fixed 91-day window, regenerated on demand), so
+# "staleness" has no meaning: a freshness check would either always warn or
+# never fire. For a live source this block would carry loaded_at_field plus
+# warn_after/error_after, and CI would run `dbt source freshness`.
 sources:
   - name: raw_staging
     schema: raw_staging
