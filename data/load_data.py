@@ -236,16 +236,20 @@ def verify_reader_permissions(conn_args, reader_password: str):
 
     with reader_conn.cursor() as cur:
         # Should succeed: SELECT
-        cur.execute(f"SELECT COUNT(*) FROM {STAGING_SCHEMA}.api_requests")
+        cur.execute(sql.SQL("SELECT COUNT(*) FROM {}.api_requests").format(
+            sql.Identifier(STAGING_SCHEMA)
+        ))
         count = cur.fetchone()[0]
         print(f"  [PASS] portfolio_reader can SELECT ({count:,} rows)")
 
         # Should fail: INSERT
         try:
             cur.execute(
-                f"INSERT INTO {STAGING_SCHEMA}.users (user_id, billing_tier, company_name, "
-                f"industry, signup_date, region) "
-                f"VALUES ('test', 'Free', 'Test', 'Test', '2026-01-01', 'us-east')"
+                sql.SQL(
+                    "INSERT INTO {}.users (user_id, billing_tier, company_name, "
+                    "industry, signup_date, region) "
+                    "VALUES ('test', 'Free', 'Test', 'Test', '2026-01-01', 'us-east')"
+                ).format(sql.Identifier(STAGING_SCHEMA))
             )
             print("  [FAIL] portfolio_reader was able to INSERT (should be denied)")
         except psycopg2.errors.InsufficientPrivilege:
@@ -253,7 +257,9 @@ def verify_reader_permissions(conn_args, reader_password: str):
 
         # Should fail: DELETE
         try:
-            cur.execute(f"DELETE FROM {STAGING_SCHEMA}.users WHERE user_id = 'test'")
+            cur.execute(sql.SQL("DELETE FROM {}.users WHERE user_id = 'test'").format(
+                sql.Identifier(STAGING_SCHEMA)
+            ))
             print("  [FAIL] portfolio_reader was able to DELETE (should be denied)")
         except psycopg2.errors.InsufficientPrivilege:
             print("  [PASS] portfolio_reader cannot DELETE (permission denied)")
