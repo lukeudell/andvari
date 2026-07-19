@@ -1,0 +1,91 @@
+# =============================================================================
+# Andvari (LLM Telemetry): local stack
+# Extracted from the command_center monorepo, 2026-07-19. Self-contained: this
+# project owns its Postgres, so it runs without any sibling project present.
+#
+#   docker compose up -d db          # start Postgres
+#   docker compose --profile seed up # generate + load + dbt build
+#   docker compose up -d app         # the Streamlit app on :8501
+# =============================================================================
+services:
+
+  db:
+    image: postgres:16
+    container_name: andvari_db
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_EXPOSE_PORT:-127.0.0.1:55432}:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER:-andvari_admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      POSTGRES_DB: ${DB_NAME:-andvari}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-andvari_admin} -d ${DB_NAME:-andvari}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [internal]
+
+  app:
+    build: ./app
+    container_name: andvari_app
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    environment:
+      PORTFOLIO_DB_HOST: db
+      PORTFOLIO_DB_PORT: 5432
+      PORTFOLIO_DB_USER: ${READER_DB_USER:-portfolio_reader}
+      PORTFOLIO_DB_PASSWORD: ${READER_DB_PASSWORD:?set READER_DB_PASSWORD in .env}
+      PORTFOLIO_DB_NAME: ${DB_NAME:-andvari}
+      # empty = served at /. Set to a path segment when behind a reverse proxy.
+      STREAMLIT_SERVER_BASE_URL_PATH: ${APP_BASE_PATH:-}
+      # single source of pricing truth, mounted read-only from the repo
+      MODEL_CATALOG_PATH: /data/model_catalog.csv
+    volumes:
+      - ./data/model_catalog.csv:/data/model_catalog.csv:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [internal]
+
+  # one-shot: generate synthetic data and load it. `--profile seed`
+  seed:
+    build: ./data
+    container_name: andvari_seed
+    profiles: [seed]
+    environment:
+      PORTFOLIO_DB_HOST: db
+      PORTFOLIO_DB_PORT: 5432
+      PORTFOLIO_DB_USER: ${DB_USER:-andvari_admin}
+      PORTFOLIO_DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      PORTFOLIO_DB_NAME: ${DB_NAME:-andvari}
+      READER_DB_PASSWORD: ${READER_DB_PASSWORD:?set READER_DB_PASSWORD in .env}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [internal]
+
+  # one-shot: dbt build. `--profile seed`
+  dbt:
+    build: ./dbt
+    container_name: andvari_dbt
+    profiles: [seed]
+    environment:
+      DBT_HOST: db
+      DBT_PORT: 5432
+      DBT_USER: ${DB_USER:-andvari_admin}
+      DBT_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      DBT_DBNAME: ${DB_NAME:-andvari}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [internal]
+
+volumes:
+  pgdata:
+
+networks:
+  internal:
