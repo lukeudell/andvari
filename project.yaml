@@ -92,6 +92,23 @@ sections:
       updated, or when write-path consistency matters more than read
       performance. Here, none of those hold.
 
+  - slug: forecaster
+    title: Cost Forecaster
+    published: true
+    body: |
+      Model the cost of an LLM workload before committing to it. Set a request
+      volume, choose a mix of models, and the forecaster projects twelve months
+      of spend against revenue and gross margin.
+
+      Its defaults are not guesses. On startup it queries the star schema as
+      the read-only role and calibrates from observed traffic: the real model
+      mix, real token averages, and real request rates from 500K telemetry
+      rows, surfaced as a TELEMETRY (OBSERVED) preset. When the database is
+      absent it degrades to a clearly labeled parametric mode rather than
+      fabricating numbers. Pricing comes from the same single-source catalog
+      the generator and the warehouse use, so the sliders can never drift from
+      the data.
+
   - slug: quality
     title: A Bug the Tests Caught
     published: true
