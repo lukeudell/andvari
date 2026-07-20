@@ -1,5 +1,41 @@
 # Security
 
+## Secrets
+
+Two secrets exist, both service credentials: the Postgres owner password
+(`DB_PASSWORD`) and the read-only role's password (`READER_DB_PASSWORD`).
+There is no data-encrypting key, no signing secret, and no external provider
+credential anywhere in this project.
+
+The contract the app satisfies:
+
+- Every secret arrives as a process environment variable. Nothing reads a
+  committed file and nothing defaults to a placeholder: compose fails fast
+  with `${VAR:?}` on each required secret, and the seed script validates its
+  environment before touching the database.
+- `.env` is local-dev convenience only and gitignored; `.env.example` carries
+  names and dummy values. Verified: no `.env` has ever entered history
+  (`git log --all --full-history -- '*.env*'` returns `.env.example` only).
+- No secret is baked into an image or written to a log. CI holds nothing
+  sensitive: its Postgres credentials are throwaway values invented inside
+  the workflow and named as such (`ci_only_not_a_secret`).
+- Deployment adds no decryption step here. A deployed environment injects
+  the same variables from an encrypted store (SOPS + age) on the operator's
+  side, in the shape of `sops exec-env <secrets-file> 'docker compose up -d'`.
+  The app reads ordinary environment variables and never knows the store
+  exists.
+
+The environment-variable contract, for the deploy handoff:
+
+| Variable | Secret | Purpose |
+|---|---|---|
+| `DB_PASSWORD` | yes | Postgres owner: migrations, dbt, loaders |
+| `READER_DB_PASSWORD` | yes | SELECT-only role the app connects as |
+| `DB_USER`, `DB_NAME`, `READER_DB_USER` | no | names, sensible defaults |
+| `POSTGRES_EXPOSE_PORT` | no | loopback bind, default 127.0.0.1:55432 |
+| `APP_BASE_PATH` | no | reverse-proxy path segment; empty serves at root |
+| `MODEL_CATALOG_PATH` | no | pricing catalog location; compose sets it |
+
 ## Dependency baseline
 
 Audited 2026-07-19 with `pip-audit`. Every `requirements.txt` here carries the
@@ -35,7 +71,7 @@ tooling, not by anything serving a request.
 ## How to verify an upgrade
 
 ```bash
-docker run --rm -v "$PWD/app:/w" -w /w python:3.11-slim           sh -c "pip install -q -r requirements.txt pytest && python -m pytest tests -q"
+docker run --rm -v "$PWD/app:/w" -w /w python:3.12-slim           sh -c "pip install -q -r requirements.txt pytest && python -m pytest tests -q"
 docker compose up -d --build app     # then open http://localhost:8501/
 docker compose --profile seed run --rm seed
 docker compose --profile seed run --rm dbt

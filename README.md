@@ -117,6 +117,11 @@ project shipped two that had never passed.
 reason in `SECURITY.md`, not a `|| true`. Dependabot proposes weekly upgrades,
 grouped per ecosystem.
 
+Secrets never touch the repo, the images, or CI. The app reads plain
+environment variables and fails fast when one is missing; deployed
+environments inject them from an encrypted store on the operator's side.
+`SECURITY.md` carries the full contract and the variable table.
+
 ## Standards
 
 Built to `udell-blueprints`, the engineering standards mirrored at
