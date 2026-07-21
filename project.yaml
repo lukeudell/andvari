@@ -31,6 +31,42 @@ sections:
       Everything self-hosted and open source. No managed warehouse, no third-party
       analytics, no vendor account needed to run it.
 
+    embeds:
+      - kind: mermaid
+        title: Pipeline architecture
+        source: |
+          flowchart LR
+              GEN["Synthetic generator<br/>Python + Faker"] --> RAW
+              subgraph WH["Postgres -- one database per demo"]
+                  RAW["raw_staging<br/>5 source tables"] --> STG["dbt staging<br/>stg_* views"]
+                  STG --> STAR["marts/star<br/>1 fact + 4 dims"]
+                  STG --> SNOW["marts/snowflake<br/>normalised counterpart"]
+              end
+              STAR --> APP["Streamlit<br/>cost forecaster"]
+              SNOW --> APP
+              STAR --> BI["Metabase<br/>read-only role"]
+              SNOW --> BI
+              DBTTEST["159 dbt tests"] -.->|gate| STAR
+              DBTTEST -.->|gate| SNOW
+      - kind: mermaid
+        title: How this plugs into the portfolio platform
+        source: |
+          flowchart TB
+              subgraph PLAT["Shared platform"]
+                  PG[("One Postgres")]
+                  MB["One Metabase"]
+              end
+              subgraph THIS["This project"]
+                  APPROLE["demo_llm_telemetry_app<br/>owns the schema, runs migrations"]
+                  RO["demo_llm_telemetry_ro<br/>read-only"]
+                  ST["Streamlit container"]
+              end
+              PG --- APPROLE
+              PG --- RO
+              APPROLE --> ST
+              RO --> MB
+              OTHER["Other demos"] -.->|CONNECT revoked| PG
+
   - slug: generation
     title: Data Generation
     published: true
@@ -63,6 +99,90 @@ sections:
       and billing tiers, reusing the star's conformed dimensions.
 
       Building both is what makes the trade-off measurable rather than theoretical.
+
+    embeds:
+      - kind: mermaid
+        title: Star schema
+        source: |
+          erDiagram
+              FCT_API_REQUESTS ||--o{ DIM_USERS : "user_key"
+              FCT_API_REQUESTS ||--o{ DIM_MODELS : "model_key"
+              FCT_API_REQUESTS ||--o{ DIM_DATE : "date_key"
+              FCT_API_REQUESTS ||--o{ DIM_ENDPOINTS : "endpoint_key"
+              FCT_API_REQUESTS {
+                  varchar request_id PK
+                  text user_key FK
+                  text model_key FK
+                  int date_key FK
+                  text endpoint_key FK
+                  numeric latency_ms
+                  int tokens_input
+                  int tokens_output
+                  numeric cost_usd
+                  smallint http_status
+                  boolean safety_flag
+              }
+              DIM_USERS {
+                  text user_key PK
+                  varchar user_id
+                  varchar billing_tier
+                  varchar company_name
+                  varchar industry
+                  varchar region
+              }
+              DIM_MODELS {
+                  text model_key PK
+                  varchar model_id
+                  varchar model_family
+                  numeric cost_per_input_token
+                  numeric cost_per_output_token
+                  int context_window_k
+              }
+              DIM_ENDPOINTS {
+                  text endpoint_key PK
+                  varchar endpoint_path
+                  varchar api_version
+                  boolean is_deprecated
+              }
+              DIM_DATE {
+                  int date_key PK
+                  date full_date
+                  varchar day_of_week
+                  boolean is_weekend
+                  smallint year
+              }
+      - kind: mermaid
+        title: Snowflake schema -- the same facts, normalised
+        source: |
+          erDiagram
+              FCT_API_REQUESTS_SF ||--o{ DIM_USERS_SF : "user_key"
+              DIM_USERS_SF ||--o{ DIM_COMPANIES : "company_key"
+              DIM_USERS_SF ||--o{ DIM_BILLING_TIERS : "billing_tier_key"
+              FCT_API_REQUESTS_SF ||--o{ DIM_MODELS : "model_key (conformed)"
+              FCT_API_REQUESTS_SF ||--o{ DIM_ENDPOINTS : "endpoint_key (conformed)"
+              FCT_API_REQUESTS_SF ||--o{ DIM_DATE : "date_key (conformed)"
+              DIM_USERS_SF {
+                  text user_key PK
+                  varchar user_id
+                  text company_key FK
+                  text billing_tier_key FK
+                  date signup_date
+                  varchar region
+              }
+              DIM_COMPANIES {
+                  text company_key PK
+                  varchar company_name
+                  varchar industry
+                  varchar company_size_band
+                  varchar hq_country
+              }
+              DIM_BILLING_TIERS {
+                  text billing_tier_key PK
+                  varchar tier_name
+                  numeric monthly_price_usd
+                  int rate_limit_rpm
+                  boolean has_priority_access
+              }
 
   - slug: performance
     title: Measuring the Star-vs-Snowflake Trade-off
