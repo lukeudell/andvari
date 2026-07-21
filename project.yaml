@@ -49,10 +49,10 @@ sections:
               DBTTEST["159 dbt tests"] -.->|gate| STAR
               DBTTEST -.->|gate| SNOW
 
-              classDef source stroke:#FF6B35,stroke-width:2px
-              classDef model stroke:#00FFFF,stroke-width:2px
-              classDef serve stroke:#39FF14,stroke-width:2px
-              classDef gate stroke:#FF00FF,stroke-width:2px,stroke-dasharray:4 3
+              classDef source fill:#0B0014,stroke:#FF6B35,stroke-width:2px,color:#FF6B35
+              classDef model fill:#0B0014,stroke:#00FFFF,stroke-width:2px,color:#00FFFF
+              classDef serve fill:#0B0014,stroke:#39FF14,stroke-width:2px,color:#39FF14
+              classDef gate fill:#0B0014,stroke:#FF00FF,stroke-width:2px,stroke-dasharray:4 3,color:#FF00FF
               class GEN,RAW source
               class STG,STAR,SNOW model
               class APP,BI serve
@@ -76,9 +76,9 @@ sections:
               RO --> MB
               OTHER["Other demos"] -.->|CONNECT revoked| PG
 
-              classDef platform stroke:#00FFFF,stroke-width:3px
-              classDef owned stroke:#39FF14,stroke-width:2px
-              classDef denied stroke:#FF6B35,stroke-width:2px,stroke-dasharray:4 3
+              classDef platform fill:#0B0014,stroke:#00FFFF,stroke-width:3px,color:#00FFFF
+              classDef owned fill:#0B0014,stroke:#39FF14,stroke-width:2px,color:#39FF14
+              classDef denied fill:#0B0014,stroke:#FF6B35,stroke-width:2px,stroke-dasharray:4 3,color:#FF6B35
               class PG,MB platform
               class APPROLE,RO,ST owned
               class OTHER denied
