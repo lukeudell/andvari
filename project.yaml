@@ -48,6 +48,15 @@ sections:
               SNOW --> BI
               DBTTEST["159 dbt tests"] -.->|gate| STAR
               DBTTEST -.->|gate| SNOW
+
+              classDef source stroke:#FF6B35,stroke-width:2px
+              classDef model stroke:#00FFFF,stroke-width:2px
+              classDef serve stroke:#39FF14,stroke-width:2px
+              classDef gate stroke:#FF00FF,stroke-width:2px,stroke-dasharray:4 3
+              class GEN,RAW source
+              class STG,STAR,SNOW model
+              class APP,BI serve
+              class DBTTEST gate
       - kind: mermaid
         title: How this plugs into the portfolio platform
         source: |
@@ -66,6 +75,13 @@ sections:
               APPROLE --> ST
               RO --> MB
               OTHER["Other demos"] -.->|CONNECT revoked| PG
+
+              classDef platform stroke:#00FFFF,stroke-width:3px
+              classDef owned stroke:#39FF14,stroke-width:2px
+              classDef denied stroke:#FF6B35,stroke-width:2px,stroke-dasharray:4 3
+              class PG,MB platform
+              class APPROLE,RO,ST owned
+              class OTHER denied
 
   - slug: generation
     title: Data Generation
