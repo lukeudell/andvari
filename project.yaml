@@ -32,6 +32,15 @@ sections:
       analytics, no vendor account needed to run it.
 
     embeds:
+      - kind: stats
+        title: By the numbers
+        source: |
+          500K | API requests | rule
+          5,000 | Users | link
+          14 | dbt models | ok
+          159 | dbt tests | accent
+          2 | Schema designs | warn
+          0 | Managed services | fg
       - kind: mermaid
         title: Pipeline architecture
         source: |
