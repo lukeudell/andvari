@@ -94,6 +94,7 @@ sections:
 
   - slug: generation
     title: Data Generation
+    nav_label: Generation
     published: true
     body: |
       The synthetic dataset is not random noise. Each column uses a
@@ -113,6 +114,7 @@ sections:
 
   - slug: models
     title: Data Models
+    nav_label: Models
     published: true
     body: |
       The same raw data is modelled twice, on purpose.
@@ -211,6 +213,7 @@ sections:
 
   - slug: performance
     title: Measuring the Star-vs-Snowflake Trade-off
+    nav_label: Trade-off
     published: true
     body: |
       One business question -- total cost by industry -- asked against both
@@ -239,6 +242,7 @@ sections:
 
   - slug: forecaster
     title: Cost Forecaster
+    nav_label: Forecaster
     published: true
     body: |
       Model the cost of an LLM workload before committing to it. Set a request
@@ -256,6 +260,7 @@ sections:
 
   - slug: quality
     title: A Bug the Tests Caught
+    nav_label: Quality
     published: true
     body: |
       The company dimension was built with `SELECT DISTINCT company_name, industry`.
@@ -272,3 +277,11 @@ sections:
 
       That is the argument for declarative data tests in a paragraph: without one,
       every number was wrong and every surface said it was fine.
+  - slug: dashboard
+    title: Live Dashboard
+    nav_label: Dashboard
+    published: true
+    body: |
+      Executive metrics on the seeded warehouse, served by the shared Metabase instance over a
+      public link. The data source connects as this project's read-only role, so the dashboard
+      can see this demo's database and nothing else.
