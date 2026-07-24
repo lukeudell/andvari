@@ -12,7 +12,7 @@
 """
 Andvari: data loader
 Creates raw staging schema in PostgreSQL and loads generated CSVs.
-Also creates the portfolio_reader role with SELECT-only access.
+Also reconciles the reader role's SELECT-only access (READER_DB_USER; created only standalone).
 
 Usage:
     python load_data.py [--host 127.0.0.1] [--port 5432]
@@ -164,118 +164,71 @@ def verify_row_counts(conn):
             print(f"  {STAGING_SCHEMA}.{table_name}: {count:,} rows")
 
 
-def create_reader_role(conn, reader_password: str):
+def ensure_reader_access(conn, reader_role: str, reader_password: str):
     """
-    Create portfolio_reader role with SELECT-only access.
-    Idempotent: drops and recreates if exists.
+    Grant SELECT-only access to the reader role, creating it only when absent.
+
+    On the portfolio platform the role already exists: the connector provisions
+    demo_<slug>_ro and this loader's account deliberately lacks CREATEROLE, so a
+    plugged-in project must never manage roles (the content contract's rule).
+    Standalone, the role is absent on first run and is created here.
     """
     with conn.cursor() as cur:
-        # Check if role exists
-        cur.execute("SELECT 1 FROM pg_roles WHERE rolname = 'portfolio_reader'")
-        if cur.fetchone():
-            # Revoke and drop existing
-            # why: reassign to whoever we are actually connected as, not a hardcoded
-            # name. In the monorepo the admin was always called portfolio_admin, so
-            # the literal worked by coincidence; extracted, each project has its own
-            # owner and re-running the loader failed on the second attempt.
+        cur.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (reader_role,))
+        if not cur.fetchone():
             cur.execute(
-                sql.SQL("REASSIGN OWNED BY portfolio_reader TO {}").format(
-                    sql.Identifier(conn.info.user)
+                sql.SQL("CREATE ROLE {} WITH LOGIN PASSWORD {}").format(
+                    sql.Identifier(reader_role), sql.Literal(reader_password)
                 )
             )
-            cur.execute("DROP OWNED BY portfolio_reader")
-            cur.execute("DROP ROLE portfolio_reader")
+            print(f"  Created role: {reader_role} (standalone mode)")
+        else:
+            print(f"  Role {reader_role} exists; granting only, never recreating")
 
-        cur.execute(
-            sql.SQL("CREATE ROLE portfolio_reader WITH LOGIN PASSWORD {}").format(
-                sql.Literal(reader_password)
-            )
-        )
-
-        # Grant CONNECT on database
-        cur.execute(sql.SQL("GRANT CONNECT ON DATABASE {} TO portfolio_reader").format(
-            sql.Identifier(conn.info.dbname)
+        cur.execute(sql.SQL("GRANT CONNECT ON DATABASE {} TO {}").format(
+            sql.Identifier(conn.info.dbname), sql.Identifier(reader_role)
         ))
 
-        # Grant USAGE on staging schema
-        cur.execute(sql.SQL("GRANT USAGE ON SCHEMA {} TO portfolio_reader").format(
-            sql.Identifier(STAGING_SCHEMA)
-        ))
-
-        # Grant SELECT on all tables in staging
-        cur.execute(sql.SQL(
-            "GRANT SELECT ON ALL TABLES IN SCHEMA {} TO portfolio_reader"
-        ).format(sql.Identifier(STAGING_SCHEMA)))
-
-        # Default privileges for future tables
-        cur.execute(sql.SQL(
-            "ALTER DEFAULT PRIVILEGES IN SCHEMA {} "
-            "GRANT SELECT ON TABLES TO portfolio_reader"
-        ).format(sql.Identifier(STAGING_SCHEMA)))
-
-        # Grant on public schema and dbt-created schemas
-        for schema in ["public", "public_staging", "public_star", "public_snowflake"]:
+        for schema in [STAGING_SCHEMA, "public", "public_staging", "public_star", "public_snowflake"]:
             cur.execute(sql.SQL(
                 "CREATE SCHEMA IF NOT EXISTS {}"
             ).format(sql.Identifier(schema)))
             cur.execute(sql.SQL(
-                "GRANT USAGE ON SCHEMA {} TO portfolio_reader"
-            ).format(sql.Identifier(schema)))
+                "GRANT USAGE ON SCHEMA {} TO {}"
+            ).format(sql.Identifier(schema), sql.Identifier(reader_role)))
             cur.execute(sql.SQL(
-                "GRANT SELECT ON ALL TABLES IN SCHEMA {} TO portfolio_reader"
-            ).format(sql.Identifier(schema)))
+                "GRANT SELECT ON ALL TABLES IN SCHEMA {} TO {}"
+            ).format(sql.Identifier(schema), sql.Identifier(reader_role)))
             cur.execute(sql.SQL(
                 "ALTER DEFAULT PRIVILEGES IN SCHEMA {} "
-                "GRANT SELECT ON TABLES TO portfolio_reader"
-            ).format(sql.Identifier(schema)))
+                "GRANT SELECT ON TABLES TO {}"
+            ).format(sql.Identifier(schema), sql.Identifier(reader_role)))
 
-        print("\n  Created role: portfolio_reader (SELECT only)")
+        print(f"\n  Reader access reconciled for: {reader_role} (SELECT only)")
 
     conn.commit()
 
 
-def verify_reader_permissions(conn_args, reader_password: str):
-    """Verify portfolio_reader can SELECT but cannot write."""
-    reader_conn = psycopg2.connect(
-        host=conn_args.host or os.getenv("PORTFOLIO_DB_HOST", "127.0.0.1"),
-        port=conn_args.port or os.getenv("PORTFOLIO_DB_PORT", "5432"),
-        user="portfolio_reader",
-        password=reader_password,
-        dbname=conn_args.dbname or os.getenv("PORTFOLIO_DB_NAME", "andvari"),
-    )
-    reader_conn.autocommit = True
+def verify_reader_permissions(conn, reader_role: str):
+    """
+    Verify the reader can SELECT and cannot write, via catalog checks.
 
-    with reader_conn.cursor() as cur:
-        # Should succeed: SELECT
-        cur.execute(sql.SQL("SELECT COUNT(*) FROM {}.api_requests").format(
-            sql.Identifier(STAGING_SCHEMA)
-        ))
-        count = cur.fetchone()[0]
-        print(f"  [PASS] portfolio_reader can SELECT ({count:,} rows)")
-
-        # Should fail: INSERT
-        try:
-            cur.execute(
-                sql.SQL(
-                    "INSERT INTO {}.users (user_id, billing_tier, company_name, "
-                    "industry, signup_date, region) "
-                    "VALUES ('test', 'Free', 'Test', 'Test', '2026-01-01', 'us-east')"
-                ).format(sql.Identifier(STAGING_SCHEMA))
-            )
-            print("  [FAIL] portfolio_reader was able to INSERT (should be denied)")
-        except psycopg2.errors.InsufficientPrivilege:
-            print("  [PASS] portfolio_reader cannot INSERT (permission denied)")
-
-        # Should fail: DELETE
-        try:
-            cur.execute(sql.SQL("DELETE FROM {}.users WHERE user_id = 'test'").format(
-                sql.Identifier(STAGING_SCHEMA)
-            ))
-            print("  [FAIL] portfolio_reader was able to DELETE (should be denied)")
-        except psycopg2.errors.InsufficientPrivilege:
-            print("  [PASS] portfolio_reader cannot DELETE (permission denied)")
-
-    reader_conn.close()
+    Asked of the catalog rather than proven by logging in: on the platform the
+    reader's password is sealed by the connector and is none of this loader's
+    business, so a connection test would fail for the wrong reason there.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT has_table_privilege(%s, %s, 'SELECT'),"
+            "       has_table_privilege(%s, %s, 'INSERT')",
+            (reader_role, f"{STAGING_SCHEMA}.api_requests",
+             reader_role, f"{STAGING_SCHEMA}.api_requests"),
+        )
+        can_select, can_insert = cur.fetchone()
+        print(f"  [{'PASS' if can_select else 'FAIL'}] {reader_role} can SELECT")
+        print(f"  [{'PASS' if not can_insert else 'FAIL'}] {reader_role} cannot INSERT")
+        if not can_select or can_insert:
+            raise RuntimeError(f"reader privileges are wrong for {reader_role}")
 
 
 def main():
@@ -288,7 +241,7 @@ def main():
     parser.add_argument(
         "--reader-password",
         default=os.getenv("STREAMLIT_DB_PASSWORD"),
-        help="Password for portfolio_reader role (or set STREAMLIT_DB_PASSWORD env var)",
+        help="Reader password, used only if the role must be created standalone",
     )
     args = parser.parse_args()
 
@@ -321,16 +274,17 @@ def main():
 
     verify_row_counts(conn)
 
-    # --- Role creation (order matters: create all roles before verification) ---
+    # --- Reader access (grants always; creation only standalone) ---
 
-    print("\nCreating portfolio_reader role...")
-    create_reader_role(conn, args.reader_password)
+    reader_role = os.getenv("READER_DB_USER", "portfolio_reader")
+    print(f"\nReconciling reader access for {reader_role}...")
+    ensure_reader_access(conn, reader_role, args.reader_password)
 
     # --- Verification (non-critical: failures logged but don't block) ---
 
-    print("\nVerifying portfolio_reader permissions...")
+    print(f"\nVerifying {reader_role} permissions...")
     try:
-        verify_reader_permissions(args, args.reader_password)
+        verify_reader_permissions(conn, reader_role)
     except Exception as e:
         print(f"  [WARN] Reader verification failed (non-blocking): {e}")
 

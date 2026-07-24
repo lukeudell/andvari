@@ -11,7 +11,7 @@
 # ============================================================
 """
 Andvari: post-dbt permission grant
-Grants portfolio_reader SELECT on all dbt-created schemas.
+Grants the reader role (READER_DB_USER) SELECT on all dbt-created schemas.
 
 Must be run AFTER dbt build completes, because dbt creates schemas with
 a 'public_' prefix (e.g., public_star) that don't exist until dbt
@@ -35,7 +35,7 @@ if _env_path.exists():  # local-dev convenience only; production injects env, no
     load_dotenv(_env_path)
 from psycopg2 import sql
 
-# All schemas that portfolio_reader should have SELECT on
+# All schemas the reader role should have SELECT on
 DBT_SCHEMAS = [
     "public_staging",
     "public_star",
@@ -44,13 +44,16 @@ DBT_SCHEMAS = [
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Grant portfolio_reader on dbt schemas")
+    parser = argparse.ArgumentParser(description="Grant the reader role on dbt schemas")
     parser.add_argument("--host", default=os.getenv("PORTFOLIO_DB_HOST", "127.0.0.1"))
     parser.add_argument("--port", default=os.getenv("PORTFOLIO_DB_PORT", "5432"))
     parser.add_argument("--user", default=os.getenv("PORTFOLIO_DB_USER", "andvari_admin"))
     parser.add_argument("--password", default=os.getenv("PORTFOLIO_DB_PASSWORD", ""))
     parser.add_argument("--dbname", default=os.getenv("PORTFOLIO_DB_NAME", "andvari"))
     args = parser.parse_args()
+    # the platform provides demo_<slug>_ro and forbids role management here; standalone
+    # keeps the old name. Either way the role must already exist by this point
+    reader_role = os.getenv("READER_DB_USER", "portfolio_reader")
 
     conn = psycopg2.connect(
         host=args.host, port=args.port,
@@ -60,7 +63,7 @@ def main():
     conn.autocommit = True
     cur = conn.cursor()
 
-    print("Granting portfolio_reader access on dbt schemas...")
+    print(f"Granting {reader_role} access on dbt schemas...")
     for schema in DBT_SCHEMAS:
         # Check if schema exists
         cur.execute(
@@ -71,15 +74,15 @@ def main():
             continue
 
         cur.execute(sql.SQL(
-            "GRANT USAGE ON SCHEMA {} TO portfolio_reader"
-        ).format(sql.Identifier(schema)))
+            "GRANT USAGE ON SCHEMA {} TO {}"
+        ).format(sql.Identifier(schema), sql.Identifier(reader_role)))
         cur.execute(sql.SQL(
-            "GRANT SELECT ON ALL TABLES IN SCHEMA {} TO portfolio_reader"
-        ).format(sql.Identifier(schema)))
+            "GRANT SELECT ON ALL TABLES IN SCHEMA {} TO {}"
+        ).format(sql.Identifier(schema), sql.Identifier(reader_role)))
         cur.execute(sql.SQL(
             "ALTER DEFAULT PRIVILEGES IN SCHEMA {} "
-            "GRANT SELECT ON TABLES TO portfolio_reader"
-        ).format(sql.Identifier(schema)))
+            "GRANT SELECT ON TABLES TO {}"
+        ).format(sql.Identifier(schema), sql.Identifier(reader_role)))
         # Count accessible tables
         cur.execute(
             "SELECT COUNT(*) FROM pg_tables WHERE schemaname = %s", (schema,)
