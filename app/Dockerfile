@@ -24,9 +24,17 @@ USER appuser
 # Copy application code
 COPY . .
 
+# Streamlit reads these natively, and a --server.port FLAG outranks them. Baking
+# the flag in fixed the port into the image, so a host could run exactly one
+# streamlit demo; the environment now decides and the image stays reusable.
+ENV STREAMLIT_SERVER_PORT=8501 \
+    STREAMLIT_SERVER_ADDRESS=0.0.0.0
+
+# Documentation only, and only of the default. The runtime port is whatever
+# STREAMLIT_SERVER_PORT says.
 EXPOSE 8501
 
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=30s \
-  CMD python -c "import os,urllib.request; b=os.getenv('STREAMLIT_SERVER_BASE_URL_PATH','').strip('/'); p='/'+b if b else ''; urllib.request.urlopen('http://localhost:8501'+p+'/_stcore/health')" || exit 1
+  CMD python -c "import os,urllib.request; b=os.getenv('STREAMLIT_SERVER_BASE_URL_PATH','').strip('/'); p='/'+b if b else ''; port=os.getenv('STREAMLIT_SERVER_PORT','8501'); urllib.request.urlopen('http://localhost:'+port+p+'/_stcore/health')" || exit 1
 
-ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+ENTRYPOINT ["streamlit", "run", "app.py"]
