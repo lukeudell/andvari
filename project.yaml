@@ -10,8 +10,8 @@ slug: llm-telemetry
 title: LLM Telemetry
 summary: Synthetic Claude-style API telemetry through a full analytics pipeline -- generation, dimensional modelling, measured schema comparison, forecasting.
 repo_url: https://github.com/lukeudell/andvari
-# flip published once the repo is pushed and the link resolves
-published: false
+# Published 2026-07-26: the repo is public and the link resolves, which was the condition.
+published: true
 tags: [dbt, postgres, python, streamlit]
 
 sections:
