@@ -15,7 +15,11 @@ WORKDIR /app
 
 # Install dependencies first for layer caching
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Then the packaging tools go. The app never imports pip, setuptools or wheel, but they vendor
+# their own urllib3, msgpack, jaraco.context and wheel, each with 2026 CVEs, and upgrading them
+# only trades one vendored set for another. A runtime image has no reason to install packages,
+# so it ships without the means to (PER-144).
+RUN pip install --no-cache-dir -r requirements.txt     && rm -rf "$(python -c 'import ensurepip, os; print(os.path.dirname(ensurepip.__file__))')/_bundled"     && pip uninstall -y setuptools wheel pip
 
 # SECURITY: Run as non-root to limit container breakout blast radius
 RUN useradd -m -u 1000 -s /bin/bash appuser

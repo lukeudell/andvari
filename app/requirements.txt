@@ -1,7 +1,13 @@
 # Streamlit Token Forecaster: pinned dependencies
 # Update policy: check monthly for CVEs, pin exact versions always.
-streamlit==1.54.0
+streamlit==1.66.1
 psycopg2-binary==2.9.10
 pandas==2.2.3
 numpy==2.2.3
 plotly==6.0.1
+
+# Stated rather than left to streamlit, which accepts any Pillow from 9.2 and any certifi: both
+# reached this image transitively at versions with 2026 CVEs, held above them by
+# tests/test_dependency_floors.py (PER-144). certifi is the eMudhra (emSign) root removal.
+pillow==13.0.0
+certifi==2026.10.23
